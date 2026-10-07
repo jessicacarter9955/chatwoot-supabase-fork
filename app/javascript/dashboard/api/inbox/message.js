@@ -1,6 +1,8 @@
 /* eslint no-console: 0 */
 /* global axios */
 import ApiClient from '../ApiClient';
+import SupabaseInboxApi from '../supabaseInboxApi';
+import { isSupabaseAuthEnabled } from '../supabaseClient';
 
 export const buildCreatePayload = ({
   message,
@@ -82,6 +84,29 @@ class MessageApi extends ApiClient {
     emailHtmlContent,
     forwardedAttachmentIds,
   }) {
+    if (isSupabaseAuthEnabled()) {
+      if (
+        isPrivate ||
+        files?.length ||
+        ccEmails ||
+        bccEmails ||
+        toEmails ||
+        templateParams ||
+        isVoiceMessage ||
+        emailHtmlContent ||
+        forwardedAttachmentIds?.length
+      ) {
+        return Promise.reject(
+          new Error('This message format is not available in the Supabase inbox yet')
+        );
+      }
+      return SupabaseInboxApi.queueReply({
+        conversationId,
+        content: message,
+        clientRequestId: echoId,
+      });
+    }
+
     return axios({
       method: 'post',
       url: `${this.url}/${conversationId}/messages`,
@@ -113,6 +138,15 @@ class MessageApi extends ApiClient {
   }
 
   getPreviousMessages({ conversationId, after, before }) {
+    if (isSupabaseAuthEnabled()) {
+      return SupabaseInboxApi.messages({
+        workspaceId: this.accountIdFromRoute,
+        conversationId,
+        after,
+        before,
+      });
+    }
+
     const params = { before };
     if (after && Number(after) !== Number(before)) {
       params.after = after;

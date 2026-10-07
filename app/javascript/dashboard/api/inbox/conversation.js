@@ -1,5 +1,7 @@
 /* global axios */
 import ApiClient from '../ApiClient';
+import SupabaseInboxApi from '../supabaseInboxApi';
+import { isSupabaseAuthEnabled } from '../supabaseClient';
 
 class ConversationApi extends ApiClient {
   constructor() {
@@ -20,6 +22,14 @@ class ConversationApi extends ApiClient {
     },
     options = {}
   ) {
+    if (isSupabaseAuthEnabled()) {
+      return SupabaseInboxApi.list({
+        workspaceId: this.accountIdFromRoute,
+        status,
+        page,
+      });
+    }
+
     return axios.get(this.url, {
       signal: options.signal,
       params: {
@@ -34,6 +44,16 @@ class ConversationApi extends ApiClient {
         updated_within: updatedWithin,
       },
     });
+  }
+
+  show(conversationId) {
+    if (isSupabaseAuthEnabled()) {
+      return SupabaseInboxApi.show({
+        workspaceId: this.accountIdFromRoute,
+        conversationId,
+      });
+    }
+    return super.show(conversationId);
   }
 
   filter(payload, options = {}) {
@@ -56,6 +76,13 @@ class ConversationApi extends ApiClient {
   }
 
   toggleStatus({ conversationId, status, snoozedUntil = null }) {
+    if (isSupabaseAuthEnabled()) {
+      return SupabaseInboxApi.setStatus({
+        conversationId,
+        status,
+        snoozedUntil,
+      });
+    }
     return axios.post(`${this.url}/${conversationId}/toggle_status`, {
       status,
       snoozed_until: snoozedUntil,

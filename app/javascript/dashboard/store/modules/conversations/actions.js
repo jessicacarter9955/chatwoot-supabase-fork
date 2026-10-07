@@ -22,6 +22,7 @@ import {
   handleVoiceCallUpdated,
   syncConversationCallVisibility,
 } from 'dashboard/helper/voice';
+import { isSupabaseAuthEnabled } from 'dashboard/api/supabaseClient';
 
 // Page size MessageFinder uses when walking backwards through a conversation.
 const MESSAGES_PER_PAGE = 20;
@@ -403,16 +404,22 @@ const actions = {
         ...pendingMessage,
         status: MESSAGE_STATUS.PROGRESS,
       });
-      const response = hasMessageFailedWithExternalError(pendingMessage)
-        ? await MessageApi.retry(conversationId, id)
-        : await MessageApi.create(pendingMessage);
+      const isSupabaseInbox = isSupabaseAuthEnabled();
+      const response = isSupabaseInbox
+        ? await MessageApi.create(pendingMessage)
+        : hasMessageFailedWithExternalError(pendingMessage)
+          ? await MessageApi.retry(conversationId, id)
+          : await MessageApi.create(pendingMessage);
+      const status = isSupabaseInbox
+        ? response.data.status
+        : MESSAGE_STATUS.SENT;
       commit(types.ADD_MESSAGE, {
         ...response.data,
-        status: MESSAGE_STATUS.SENT,
+        status,
       });
       commit(types.ADD_CONVERSATION_ATTACHMENTS, {
         ...response.data,
-        status: MESSAGE_STATUS.SENT,
+        status,
       });
     } catch (error) {
       const errorMessage = error.response

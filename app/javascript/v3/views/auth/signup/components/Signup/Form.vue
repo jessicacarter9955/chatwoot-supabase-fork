@@ -87,10 +87,11 @@ const isFormValid = computed(() => !v$.value.$invalid);
 const performRegistration = async () => {
   isSignupInProgress.value = true;
   try {
-    await register({
+    const result = await register({
       ...credentials,
       shopifyPendingInstallToken: props.shopifyPendingInstall,
     });
+    if (result?.signedIn) return;
     router.push({
       name: 'auth_verify_email',
       state: { email: credentials.email },

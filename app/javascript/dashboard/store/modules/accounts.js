@@ -7,6 +7,10 @@ import EnterpriseAccountAPI from '../../api/enterprise/account';
 import WhatsappChannel from '../../api/channel/whatsappChannel';
 import { throwErrorMessage } from '../utils/api';
 import { getLanguageDirection } from 'dashboard/components/widgets/conversation/advancedFilterItems/languages';
+import {
+  getSupabaseClient,
+  isSupabaseAuthEnabled,
+} from 'dashboard/api/supabaseClient';
 
 const findRecordById = ($state, id) =>
   $state.records.find(record => record.id === Number(id)) || {};
@@ -67,11 +71,32 @@ export const actions = {
       features: data.features,
     });
   },
-  get: async ({ commit }, { silent, accountId } = {}) => {
+  get: async ({ commit, rootState }, { silent, accountId } = {}) => {
     if (!silent) {
       commit(types.default.SET_ACCOUNT_UI_FLAG, { isFetchingItem: true });
     }
     try {
+      if (isSupabaseAuthEnabled()) {
+        const workspaceId = Number(
+          accountId || rootState.route?.params?.accountId
+        );
+        const { data, error } = await getSupabaseClient()
+          .from('workspaces')
+          .select('id, name, created_at')
+          .eq('id', workspaceId)
+          .single();
+        if (error) throw new Error(error.message);
+        commit(types.default.ADD_ACCOUNT, {
+          id: data.id,
+          name: data.name,
+          locale: 'en',
+          created_at: data.created_at,
+          features: {},
+          status: 'active',
+        });
+        return;
+      }
+
       const response = await AccountAPI.get(accountId);
       commit(types.default.ADD_ACCOUNT, response.data);
     } catch {

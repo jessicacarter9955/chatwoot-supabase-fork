@@ -11,6 +11,11 @@ import { useBranding } from 'shared/composables/useBranding';
 import AnalyticsHelper from 'dashboard/helper/AnalyticsHelper';
 import { SESSION_EVENTS } from 'dashboard/helper/AnalyticsHelper/events';
 import { getLoginRedirectURL, getSignupRoute } from 'v3/helpers/AuthHelper';
+import {
+  getSupabaseClient,
+  getSupabaseCurrentUser,
+  isSupabaseAuthEnabled,
+} from 'dashboard/api/supabaseClient';
 
 // components
 import SimpleDivider from '../../components/Divider/SimpleDivider.vue';
@@ -158,6 +163,20 @@ export default {
     }
   },
   mounted() {
+    if (isSupabaseAuthEnabled()) {
+      getSupabaseClient().auth.getSession().then(({ data, error }) => {
+        if (error || !data.session) return;
+        getSupabaseCurrentUser().then(user => {
+          window.location = getLoginRedirectURL({
+            ssoAccountId: this.ssoAccountId,
+            ssoConversationId: this.ssoConversationId,
+            redirectUrl: this.redirectUrl,
+            user,
+          });
+        }).catch(() => {});
+      });
+    }
+
     if (this.authError) {
       // Wait for the sibling snackbar to mount and subscribe to toast events.
       this.$nextTick(() => {

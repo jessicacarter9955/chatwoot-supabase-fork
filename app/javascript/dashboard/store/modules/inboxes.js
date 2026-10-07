@@ -12,6 +12,10 @@ import AnalyticsHelper from '../../helper/AnalyticsHelper';
 import camelcaseKeys from 'camelcase-keys';
 import { ACCOUNT_EVENTS } from '../../helper/AnalyticsHelper/events';
 import { channelActions, buildInboxData } from './inboxes/channelActions';
+import {
+  getSupabaseClient,
+  isSupabaseAuthEnabled,
+} from 'dashboard/api/supabaseClient';
 
 export const state = {
   records: [],
@@ -164,9 +168,40 @@ export const actions = {
       // Ignore error
     }
   },
-  get: async ({ commit }) => {
+  get: async ({ commit, rootState }) => {
     commit(types.default.SET_INBOXES_UI_FLAG, { isFetching: true });
     try {
+      if (isSupabaseAuthEnabled()) {
+        const workspaceId = Number(rootState.route?.params?.accountId);
+        const { data, error } = await getSupabaseClient()
+          .from('provider_connections')
+          .select('*')
+          .eq('workspace_id', workspaceId)
+          .order('created_at', { ascending: true });
+        if (error) throw new Error(error.message);
+
+        const channelTypes = {
+          email: 'Channel::Email',
+          slack: 'Channel::Api',
+          whatsapp: 'Channel::Whatsapp',
+        };
+        const inboxes = (data || []).map(connection => ({
+          id: connection.id,
+          account_id: connection.workspace_id,
+          name: connection.display_name || connection.account_address || connection.provider,
+          channel_type: channelTypes[connection.provider] || 'Channel::Api',
+          provider: connection.provider,
+          email: connection.account_address,
+          phone_number: connection.account_address,
+          status: connection.status,
+          avatar_url: connection.metadata?.avatar_url || null,
+          additional_attributes: connection.metadata || {},
+        }));
+        commit(types.default.SET_INBOXES_UI_FLAG, { isFetching: false });
+        commit(types.default.SET_INBOXES, inboxes);
+        return true;
+      }
+
       const response = await InboxesAPI.get(true);
       commit(types.default.SET_INBOXES_UI_FLAG, { isFetching: false });
       commit(types.default.SET_INBOXES, response.data.payload);

@@ -23,6 +23,7 @@ import {
 } from './helper/pushHelper';
 import ReconnectService from 'dashboard/helper/ReconnectService';
 import { useUISettings } from 'dashboard/composables/useUISettings';
+import { isSupabaseAuthEnabled } from 'dashboard/api/supabaseClient';
 
 export default {
   name: 'App',
@@ -121,17 +122,19 @@ export default {
       // If user locale is set, use it; otherwise use account locale
       this.setLocale(this.uiSettings?.locale || locale);
       this.latestChatwootVersion = latestChatwootVersion;
-      vueActionCable.init(this.store, pubsubToken);
-      this.reconnectService = new ReconnectService(this.store, this.router);
-      window.reconnectService = this.reconnectService;
+      if (!isSupabaseAuthEnabled()) {
+        vueActionCable.init(this.store, pubsubToken);
+        this.reconnectService = new ReconnectService(this.store, this.router);
+        window.reconnectService = this.reconnectService;
 
-      verifyServiceWorkerExistence(registration =>
-        registration.pushManager.getSubscription().then(subscription => {
-          if (subscription) {
-            registerSubscription();
-          }
-        })
-      );
+        verifyServiceWorkerExistence(registration =>
+          registration.pushManager.getSubscription().then(subscription => {
+            if (subscription) {
+              registerSubscription();
+            }
+          })
+        );
+      }
     },
   },
 };

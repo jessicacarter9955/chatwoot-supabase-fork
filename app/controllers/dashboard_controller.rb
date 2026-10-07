@@ -77,7 +77,7 @@ class DashboardController < ActionController::Base
     {
       APP_VERSION: Chatwoot.config[:version],
       VAPID_PUBLIC_KEY: VapidService.public_key,
-      ENABLE_ACCOUNT_SIGNUP: GlobalConfigService.load('ENABLE_ACCOUNT_SIGNUP', 'false'),
+      ENABLE_ACCOUNT_SIGNUP: supabase_auth_enabled? ? 'true' : GlobalConfigService.load('ENABLE_ACCOUNT_SIGNUP', 'false'),
       FB_APP_ID: GlobalConfigService.load('FB_APP_ID', ''),
       INSTAGRAM_APP_ID: GlobalConfigService.load('INSTAGRAM_APP_ID', ''),
       TIKTOK_APP_ID: GlobalConfigService.load('TIKTOK_APP_ID', ''),
@@ -86,12 +86,19 @@ class DashboardController < ActionController::Base
       WHATSAPP_CONFIGURATION_ID: GlobalConfigService.load('WHATSAPP_CONFIGURATION_ID', ''),
       IS_ENTERPRISE: ChatwootApp.enterprise?,
       IS_COMPANY_ENRICHMENT_ENABLED: ChatwootApp.enterprise? && GlobalConfigService.load('CONTEXT_DEV_API_KEY', nil).present?,
+      SUPABASE_URL: ENV.fetch('SUPABASE_URL', ''),
+      SUPABASE_ANON_KEY: ENV.fetch('SUPABASE_ANON_KEY', ''),
+      SUPABASE_AUTH_ENABLED: supabase_auth_enabled?,
       AZURE_APP_ID: GlobalConfigService.load('AZURE_APP_ID', ''),
       GIT_SHA: GIT_HASH,
       ALLOWED_LOGIN_METHODS: allowed_login_methods,
       ACTIVE_PLATFORM_BANNERS: active_platform_banners,
       ACTIVE_FEATURE_ANNOUNCEMENTS: active_feature_announcements
     }
+  end
+
+  def supabase_auth_enabled?
+    ENV.fetch('SUPABASE_AUTH_ENABLED', 'false') == 'true'
   end
 
   def active_platform_banners

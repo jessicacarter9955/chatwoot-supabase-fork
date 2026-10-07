@@ -9,6 +9,11 @@ import {
   getLoginRedirectURL,
   getCredentialsFromEmail,
 } from '../helpers/AuthHelper';
+import {
+  getSupabaseClient,
+  getSupabaseCurrentUser,
+  isSupabaseAuthEnabled,
+} from 'dashboard/api/supabaseClient';
 
 export const login = async ({
   ssoAccountId,
@@ -16,6 +21,23 @@ export const login = async ({
   redirectUrl,
   ...credentials
 }) => {
+  if (isSupabaseAuthEnabled()) {
+    const { data, error } = await getSupabaseClient().auth.signInWithPassword({
+      email: credentials.email,
+      password: credentials.password,
+    });
+    if (error) throw new Error(error.message);
+
+    const user = await getSupabaseCurrentUser();
+    window.location = getLoginRedirectURL({
+      ssoAccountId,
+      ssoConversationId,
+      redirectUrl,
+      user,
+    });
+    return data;
+  }
+
   try {
     const response = await wootAPI.post('auth/sign_in', credentials);
 
@@ -84,6 +106,26 @@ export const login = async ({
 };
 
 export const register = async creds => {
+  if (isSupabaseAuthEnabled()) {
+    const { fullName, accountName } = getCredentialsFromEmail(creds.email);
+    const { data, error } = await getSupabaseClient().auth.signUp({
+      email: creds.email,
+      password: creds.password,
+      options: {
+        data: { full_name: fullName, account_name: accountName },
+        emailRedirectTo: `${window.location.origin}/app/login`,
+      },
+    });
+    if (error) throw new Error(error.message);
+
+    if (data.session) {
+      const user = await getSupabaseCurrentUser();
+      window.location = getLoginRedirectURL({ user });
+      return { signedIn: true };
+    }
+    return { confirmationRequired: true };
+  }
+
   try {
     const { fullName, accountName } = getCredentialsFromEmail(creds.email);
     const payload = {
@@ -109,6 +151,16 @@ export const resendConfirmation = async ({
   hCaptchaClientResponse,
   redirectUrl,
 }) => {
+  if (isSupabaseAuthEnabled()) {
+    const { error } = await getSupabaseClient().auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/app/login` },
+    });
+    if (error) throw new Error(error.message);
+    return;
+  }
+
   return wootAPI.post('resend_confirmation', {
     email,
     h_captcha_client_response: hCaptchaClientResponse,

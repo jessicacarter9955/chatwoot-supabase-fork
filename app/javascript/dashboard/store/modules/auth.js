@@ -2,6 +2,11 @@ import types from '../mutation-types';
 import authAPI from '../../api/auth';
 
 import { setUser, clearCookiesOnLogout } from '../utils/api';
+import {
+  getSupabaseClient,
+  getSupabaseCurrentUser,
+  isSupabaseAuthEnabled,
+} from 'dashboard/api/supabaseClient';
 import SessionStorage from 'shared/helpers/sessionStorage';
 import { SESSION_STORAGE_KEYS } from 'dashboard/constants/sessionStorage';
 
@@ -114,6 +119,22 @@ export const actions = {
     }
   },
   async setUser({ commit, dispatch }) {
+    if (isSupabaseAuthEnabled()) {
+      try {
+        const currentUser = await getSupabaseCurrentUser();
+        if (currentUser) {
+          setUser(currentUser);
+          commit(types.SET_CURRENT_USER, currentUser);
+        } else {
+          commit(types.CLEAR_USER);
+        }
+      } catch {
+        commit(types.CLEAR_USER);
+      }
+      commit(types.SET_CURRENT_USER_UI_FLAGS, { isFetching: false });
+      return;
+    }
+
     if (authAPI.hasAuthCookie()) {
       await dispatch('validityCheck');
     } else {
@@ -121,7 +142,13 @@ export const actions = {
     }
     commit(types.SET_CURRENT_USER_UI_FLAGS, { isFetching: false });
   },
-  logout({ commit }) {
+  async logout({ commit }) {
+    if (isSupabaseAuthEnabled()) {
+      await getSupabaseClient().auth.signOut();
+      commit(types.CLEAR_USER);
+      window.location.assign('/app/login');
+      return;
+    }
     commit(types.CLEAR_USER);
   },
 
