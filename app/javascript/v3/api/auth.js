@@ -158,7 +158,7 @@ export const resendConfirmation = async ({
       options: { emailRedirectTo: `${window.location.origin}/app/login` },
     });
     if (error) throw new Error(error.message);
-    return;
+    return null;
   }
 
   return wootAPI.post('resend_confirmation', {

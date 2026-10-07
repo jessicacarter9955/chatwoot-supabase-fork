@@ -97,7 +97,9 @@ class MessageApi extends ApiClient {
         forwardedAttachmentIds?.length
       ) {
         return Promise.reject(
-          new Error('This message format is not available in the Supabase inbox yet')
+          new Error(
+            'This message format is not available in the Supabase inbox yet'
+          )
         );
       }
       return SupabaseInboxApi.queueReply({

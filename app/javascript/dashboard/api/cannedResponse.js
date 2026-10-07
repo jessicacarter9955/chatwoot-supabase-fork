@@ -45,7 +45,9 @@ class CannedResponse extends CacheEnabledApiClient {
       .eq('workspace_id', workspaceId)
       .order('shortcut', { ascending: true });
     if (error) throw new Error(error.message);
-    return { data: (data || []).map(reply => mapQuickReply(reply, workspaceId)) };
+    return {
+      data: (data || []).map(reply => mapQuickReply(reply, workspaceId)),
+    };
   }
 
   async create({ short_code: shortcut, content: body }) {

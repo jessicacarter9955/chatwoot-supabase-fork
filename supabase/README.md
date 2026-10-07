@@ -20,6 +20,10 @@ Provider OAuth secrets do not belong in `provider_connections` or any client-rea
 
 RLS scopes user-visible rows to workspace membership. The outbox has no authenticated-client policy; only trusted server-side workers should claim and deliver jobs. The signup trigger creates a personal workspace for each Supabase Auth user.
 
+## Existing Supabase projects
+
+This migration and UI adapter currently target a fresh database created from this repository's migration. They are not yet compatible with an existing RelayDesk project: that schema uses UUID primary keys, links `profiles.id` directly to `auth.users.id`, and stores canned responses in `canned_responses`, while this adapter currently expects integer IDs, `profiles.auth_user_id`, and `quick_replies`. Do not enable `SUPABASE_AUTH_ENABLED` against that existing project or apply this migration there until the schema adapter and a non-destructive migration plan are completed.
+
 ## Local Supabase setup
 
 1. Install the Supabase CLI and run `supabase start` from the repository root.

@@ -405,11 +405,14 @@ const actions = {
         status: MESSAGE_STATUS.PROGRESS,
       });
       const isSupabaseInbox = isSupabaseAuthEnabled();
-      const response = isSupabaseInbox
-        ? await MessageApi.create(pendingMessage)
-        : hasMessageFailedWithExternalError(pendingMessage)
-          ? await MessageApi.retry(conversationId, id)
-          : await MessageApi.create(pendingMessage);
+      let response;
+      if (isSupabaseInbox) {
+        response = await MessageApi.create(pendingMessage);
+      } else if (hasMessageFailedWithExternalError(pendingMessage)) {
+        response = await MessageApi.retry(conversationId, id);
+      } else {
+        response = await MessageApi.create(pendingMessage);
+      }
       const status = isSupabaseInbox
         ? response.data.status
         : MESSAGE_STATUS.SENT;

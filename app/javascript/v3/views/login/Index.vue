@@ -164,17 +164,21 @@ export default {
   },
   mounted() {
     if (isSupabaseAuthEnabled()) {
-      getSupabaseClient().auth.getSession().then(({ data, error }) => {
-        if (error || !data.session) return;
-        getSupabaseCurrentUser().then(user => {
-          window.location = getLoginRedirectURL({
-            ssoAccountId: this.ssoAccountId,
-            ssoConversationId: this.ssoConversationId,
-            redirectUrl: this.redirectUrl,
-            user,
-          });
-        }).catch(() => {});
-      });
+      getSupabaseClient()
+        .auth.getSession()
+        .then(({ data, error }) => {
+          if (error || !data.session) return;
+          getSupabaseCurrentUser()
+            .then(user => {
+              window.location = getLoginRedirectURL({
+                ssoAccountId: this.ssoAccountId,
+                ssoConversationId: this.ssoConversationId,
+                redirectUrl: this.redirectUrl,
+                user,
+              });
+            })
+            .catch(() => {});
+        });
     }
 
     if (this.authError) {

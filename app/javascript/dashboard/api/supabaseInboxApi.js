@@ -113,7 +113,10 @@ export default {
             id: message.author_user_id,
             name: message.author_name,
           },
-          status: message.delivery_status === 'queued' ? 'pending' : message.delivery_status,
+          status:
+            message.delivery_status === 'queued'
+              ? 'pending'
+              : message.delivery_status,
           created_at: Math.floor(new Date(message.created_at).getTime() / 1000),
           private: false,
           attachments: [],

@@ -67,6 +67,14 @@ const summary = {
   last_verified_at: '2026-07-29T08:30:00Z',
 };
 
+const formatUsd = amount =>
+  new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+
 const SettingsLayoutStub = {
   name: 'SettingsLayout',
   props: ['isLoading', 'loadingMessage'],
@@ -129,9 +137,9 @@ describe('ShopifyBilling', () => {
     expect(mocks.dispatch).toHaveBeenCalledWith('setUser');
     expect(wrapper.text()).toContain('Shopify Growth');
     expect(wrapper.text()).toContain('BILLING_SETTINGS.SHOPIFY.STATUS.ACTIVE');
-    expect(wrapper.text()).toContain('$49.00');
+    expect(wrapper.text()).toContain(formatUsd(49));
     expect(wrapper.text()).toContain(
-      'BILLING_SETTINGS.SHOPIFY.PER_MONTH: $49.00'
+      `BILLING_SETTINGS.SHOPIFY.PER_MONTH: ${formatUsd(49)}`
     );
     expect(wrapper.findComponent(BillingCardStub).props('description')).toBe(
       'Manage your Acme plan in Shopify.'
@@ -148,10 +156,10 @@ describe('ShopifyBilling', () => {
     await flushPromises();
 
     expect(wrapper.text()).toContain(
-      'BILLING_SETTINGS.SHOPIFY.PER_YEAR: $49.00'
+      `BILLING_SETTINGS.SHOPIFY.PER_YEAR: ${formatUsd(49)}`
     );
     expect(wrapper.text()).not.toContain(
-      'BILLING_SETTINGS.SHOPIFY.PER_MONTH: $49.00'
+      `BILLING_SETTINGS.SHOPIFY.PER_MONTH: ${formatUsd(49)}`
     );
   });
 

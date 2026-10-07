@@ -188,7 +188,10 @@ export const actions = {
         const inboxes = (data || []).map(connection => ({
           id: connection.id,
           account_id: connection.workspace_id,
-          name: connection.display_name || connection.account_address || connection.provider,
+          name:
+            connection.display_name ||
+            connection.account_address ||
+            connection.provider,
           channel_type: channelTypes[connection.provider] || 'Channel::Api',
           provider: connection.provider,
           email: connection.account_address,
