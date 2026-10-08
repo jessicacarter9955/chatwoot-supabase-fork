@@ -37,3 +37,7 @@ With `SUPABASE_AUTH_ENABLED=false` (the default), Chatwoot keeps its existing Ra
 ## Verification status (2026-10-08)
 
 The frontend inbox bridge has four passing unit tests covering authenticated read headers, rejection without a session, snooze timestamp conversion, and queued-message mapping. Supabase is mocked in these tests: they are not evidence that database migrations, RLS, deployed functions, or provider delivery work end to end. The latest broad frontend run recorded 5,157 passing tests but ended with two Vitest worker fetch timeouts, so the full suite remains incomplete. No valid running-inbox screenshot has been captured. See `PROJECT_STATUS.md` for remaining work and verified progress.
+
+### Message history pagination
+
+Fixed initial history loading to return the latest 20 messages in display order, matching Chatwoot's `MessageFinder`. Older pages return 20, newer pages 100, and bounded history includes the lower cursor and excludes the upper cursor (up to 1000). Six Node tests exercise the real Supabase PostgREST query builder with mocked HTTP, including empty history and database errors. Run with Node 24: `node --test supabase/tests/message-page.test.mjs`. All six passed on October 8. This does not validate live database behavior or RLS.

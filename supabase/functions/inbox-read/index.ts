@@ -1,3 +1,4 @@
+import { readMessagePage } from './message-page.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
@@ -6,7 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
 };
 const PAGE_SIZE = 25;
-const MESSAGE_PAGE_SIZE = 20;
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -248,16 +248,12 @@ Deno.serve(async request => {
       return jsonResponse({ error: 'after_must_be_a_positive_integer' }, 422);
     }
 
-    let messageQuery = supabase.from('messages').select('*').eq('conversation_id', conversation.id);
-    if (beforeId) messageQuery = messageQuery.lt('id', beforeId);
-    if (afterId) messageQuery = messageQuery.gt('id', afterId);
-    const { data: messages, error } = await messageQuery
-      .order('created_at', { ascending: !beforeId })
-      .order('id', { ascending: !beforeId })
-      .limit(MESSAGE_PAGE_SIZE);
+    const { data: orderedMessages, error } = await readMessagePage(
+      supabase.from('messages').select('*').eq('conversation_id', conversation.id),
+      beforeId,
+      afterId
+    );
     if (error) return jsonResponse({ error: error.message }, 422);
-
-    const orderedMessages = beforeId ? [...(messages ?? [])].reverse() : messages ?? [];
     const authorIds = [...new Set(orderedMessages.map(message => message.author_user_id).filter(Boolean))];
     const [contactResult, authorsResult] = await Promise.all([
       supabase.from('contacts').select('*').eq('id', conversation.contact_id).maybeSingle(),

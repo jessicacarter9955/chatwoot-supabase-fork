@@ -9,6 +9,7 @@ Green means the named deliverable was verified; yellow means partial implementat
 | Chatwoot source/UI base | 🟩 Cloned | Chatwoot source is present. This does not establish that the complete application runs. |
 | Supabase inbox backend | 🟨 Partial | TypeScript Edge Functions and a fresh-database migration cover reads, status changes, queueing, and normalized ingest. Database integration has not been verified. |
 | Supabase frontend bridge unit tests | 🟩 Verified | Four tests passed on October 8: JWT read headers, refusal without a session, snooze timestamp conversion, and queued-message mapping. ESLint passed for the spec. These tests mock Supabase and do not verify a deployed backend. |
+| Message history pagination | 🟩 Unit verified | Initial load now returns the latest 20 messages. Six tests passed using the real query builder with mocked HTTP; live database verification remains pending. |
 | Existing RelayDesk compatibility | 🟥 Blocked | UUID IDs and existing profiles/canned_responses differ from the prototype schema. Adapt and verify before any migration or enabling the bridge. |
 | Gmail, Slack, WhatsApp integration | 🟥 Missing in migrated backend | Provider OAuth, inbound signature verification, and channel adapters remain. This status does not describe upstream Chatwoot capabilities. |
 | Provider delivery / scheduled sending | 🟥 Missing | A reply can be queued in the prototype; no verified worker delivers it to a provider. |
