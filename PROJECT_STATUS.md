@@ -18,7 +18,7 @@ Green means the named deliverable was verified; yellow means partial implementat
 | RLS / tenant isolation | 🟨 Unverified | Policies are defined in the fresh schema; no database integration/security checks have passed yet. |
 | Full frontend suite | 🟨 Incomplete | Latest broad run recorded 5,157 passing tests and two worker fetch timeouts (exit 1). Earlier billing assertion failures were fixed; their focused rerun passed 11 tests. |
 | Runtime / screenshots | 🟥 Unverified | No valid screenshot of a running inbox. Ruby/Postgres/Redis/Docker were unavailable locally; the Histoire attempt showed no stories. |
-| GitHub | 🟨 Destination pending | Private personal repository push failed again with HTTP 408 on October 8. Incremental work is being pushed to the existing public personal fork; private delivery remains unresolved. |
+| GitHub | 🟨 Destination pending | Private personal repository push failed again with HTTP 408 on October 8. The pagination fix was pushed successfully to the existing public personal fork. HTTP/1.1 with a larger request buffer also failed; the GitHub REST import endpoint is deprecated (404). Private delivery remains unresolved. |
 
 ## Next tasks
 
