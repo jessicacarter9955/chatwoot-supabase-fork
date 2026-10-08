@@ -7,6 +7,7 @@ export default defineConfig({
   collectMaxThreads: 4,
   vite: {
     server: {
+      host: '127.0.0.1',
       port: 6179,
     },
   },

@@ -41,3 +41,7 @@ The frontend inbox bridge has four passing unit tests covering authenticated rea
 ### Message history pagination
 
 Fixed initial history loading to return the latest 20 messages in display order, matching Chatwoot's `MessageFinder`. Older pages return 20, newer pages 100, and bounded history includes the lower cursor and excludes the upper cursor (up to 1000). Six Node tests exercise the real Supabase PostgREST query builder with mocked HTTP, including empty history and database errors. Run with Node 24: `node --test supabase/tests/message-page.test.mjs`. All six passed on October 8. This does not validate live database behavior or RLS.
+
+### Local UI preview diagnostics (2026-10-08)
+
+Declared the PostCSS configuration's missing direct dependency, postcss-import 15.1.0, and explicitly bound Histoire to 127.0.0.1. Loading all four PostCSS plugins and compiling CSS passed with Node 24. The browser no longer shows the missing-module overlay, but Histoire still reports zero stories and screenshot capture is blank. Histoire 0.17.15 declares Vite support through version 5; the installed Vite is 6.4.2. Story collection still fails, and the dependency mismatch needs isolation before claiming a visual verification. No running inbox or database integration is demonstrated by this preview.
