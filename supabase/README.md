@@ -49,3 +49,7 @@ Declared the PostCSS configuration's missing direct dependency, postcss-import 1
 ### Histoire renderer isolation (2026-10-09)
 
 A temporary build restricted to the existing Button story confirms the failure is in Histoire's Vue story collector, before a browser can render the component. The stack reports esolveComponent is not a function from the Histoire generated story stub. Histoire 0.17.15's declared peer dependency supports Vite through 5, while the project runs Vite 6.4.2; this is an unsupported combination, but the isolated build has not established causation. Alternate alias and SSR bundling probes stalled under high memory use and were stopped. No product UI screenshot is available; the previously captured white screenshot is diagnostic only.
+
+### Additional runtime checks (2026-10-09)
+
+Using Histoire's resolved Vite server configuration, `ssrLoadModule('vue')` returned functions for both `resolveComponent` and `defineComponent`; the Vue package alias resolves correctly. This narrows the blank-story error to the Histoire collection/transform path, but does not yet identify the faulty transform. A one-story build that attempted to capture the transformed SFC stalled while consuming about 1 GB RAM and was stopped. `supabase db lint --local --schema public` was attempted with Supabase CLI 2.20.5; it could not connect to localhost:54322, and Docker is not installed. No local Postgres lint, migration run, or database verification has passed.
