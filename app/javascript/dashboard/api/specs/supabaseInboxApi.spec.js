@@ -43,6 +43,7 @@ describe('Supabase inbox API', () => {
     await expect(
       SupabaseInboxApi.list({
         workspaceId: '1',
+        inboxId: '7',
         status: 'open',
         assigneeType: 'me',
       })
@@ -52,7 +53,7 @@ describe('Supabase inbox API', () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       new URL(
-        'https://example.supabase.co/functions/v1/inbox-read?action=list&workspaceId=1&status=open&assigneeType=me&page=1'
+        'https://example.supabase.co/functions/v1/inbox-read?action=list&workspaceId=1&inboxId=7&status=open&assigneeType=me&page=1'
       ),
       {
         headers: {

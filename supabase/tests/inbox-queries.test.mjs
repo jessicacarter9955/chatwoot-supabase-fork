@@ -173,8 +173,10 @@ test('conversation counts follow the selected status like ConversationFinder', a
           assert.equal(params.get('workspace_id'), 'eq.9');
           assert.equal(params.get('select'), 'id');
           assert.equal(params.get('status'), 'eq.open');
+          assert.equal(params.get('provider_connection_id'), 'eq.7');
           const assignedTo = params.get('assigned_to');
-          const count = assignedTo === 'eq.44' ? 4 : assignedTo === 'is.null' ? 3 : 7;
+          const count =
+            assignedTo === 'eq.44' ? 4 : assignedTo === 'is.null' ? 3 : 7;
           return new Response(null, {
             headers: { 'Content-Range': `0-0/${count}` },
           });
@@ -183,8 +185,15 @@ test('conversation counts follow the selected status like ConversationFinder', a
     }
   );
 
-  const result = await readConversationCounts(client, 9, 'user-auth-1', 'open');
-  assert.equal(requests.length, 4);
+  const result = await readConversationCounts(
+    client,
+    9,
+    'user-auth-1',
+    'open',
+    44,
+    7
+  );
+  assert.equal(requests.length, 3);
   assert.deepEqual(result, {
     data: {
       mine_count: 4,
@@ -293,6 +302,7 @@ test('assignee tabs filter the PostgREST conversation query', async () => {
           fetch: async url => {
             const params = new URL(url).searchParams;
             assert.equal(params.get('assigned_to'), expected);
+            assert.equal(params.get('provider_connection_id'), 'eq.7');
             return new Response(JSON.stringify([]), {
               headers: { 'Content-Type': 'application/json' },
             });
@@ -303,7 +313,8 @@ test('assignee tabs filter the PostgREST conversation query', async () => {
     const query = filterInboxConversations(
       client.from('conversations').select('*'),
       assigneeType,
-      44
+      44,
+      7
     );
     const { error } = await query;
     assert.equal(error, null);

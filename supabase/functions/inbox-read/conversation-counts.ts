@@ -16,7 +16,8 @@ export async function readConversationCounts(
   workspaceId: number,
   authUserId: string,
   status: string,
-  resolvedProfileId?: number
+  resolvedProfileId?: number,
+  inboxId?: number | null
 ) {
   const profile =
     resolvedProfileId === undefined
@@ -30,6 +31,7 @@ export async function readConversationCounts(
       .select('id', { count: 'exact', head: true })
       .eq('workspace_id', workspaceId);
     if (status !== 'all') query = query.eq('status', status);
+    if (inboxId) query = query.eq('provider_connection_id', inboxId);
     return query;
   };
 
@@ -59,8 +61,10 @@ export async function readConversationCounts(
 export function filterInboxConversations(
   query: any,
   assigneeType: string,
-  profileId: number
+  profileId: number,
+  inboxId?: number | null
 ) {
+  if (inboxId) query = query.eq('provider_connection_id', inboxId);
   switch (assigneeType) {
     case 'me':
       return query.eq('assigned_to', profileId);
