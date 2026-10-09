@@ -192,3 +192,56 @@ test('conversation counts stay independent of the selected status', async () => 
     error: null,
   });
 });
+
+test('conversation count permission errors are returned instead of zero counts', async () => {
+  const profileFailureClient = createClient(
+    'https://example.supabase.co',
+    'public-test-key',
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: async () =>
+          new Response(
+            JSON.stringify({ message: 'profile denied', code: '42501' }),
+            { status: 403, headers: { 'Content-Type': 'application/json' } }
+          ),
+      },
+    }
+  );
+  const profileFailure = await readConversationCounts(
+    profileFailureClient,
+    9,
+    'user-auth-1'
+  );
+  assert.equal(profileFailure.data, null);
+  assert.equal(profileFailure.error.code, '42501');
+
+  const countsFailureClient = createClient(
+    'https://example.supabase.co',
+    'public-test-key',
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: async url => {
+          const params = new URL(url).searchParams;
+          if (params.has('auth_user_id')) {
+            return new Response(JSON.stringify([{ id: 44 }]), {
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+          return new Response(
+            JSON.stringify({ message: 'counts denied', code: '42501' }),
+            { status: 403, headers: { 'Content-Type': 'application/json' } }
+          );
+        },
+      },
+    }
+  );
+  const countsFailure = await readConversationCounts(
+    countsFailureClient,
+    9,
+    'user-auth-1'
+  );
+  assert.equal(countsFailure.data, null);
+  assert.equal(countsFailure.error.code, '42501');
+});

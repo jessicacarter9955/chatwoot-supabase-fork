@@ -18,7 +18,9 @@ export async function readConversationCounts(
 
   const [all, mine, unassigned] = await Promise.all([
     baseQuery(),
-    profile.data ? baseQuery().eq('assigned_to', profile.data.id) : Promise.resolve({ count: 0, error: null }),
+    profile.data
+      ? baseQuery().eq('assigned_to', profile.data.id)
+      : Promise.resolve({ count: 0, error: null }),
     baseQuery().is('assigned_to', null),
   ]);
   const error = all.error ?? mine.error ?? unassigned.error;
