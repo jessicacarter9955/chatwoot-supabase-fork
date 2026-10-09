@@ -56,3 +56,7 @@ Using Histoire's resolved Vite server configuration, `ssrLoadModule('vue')` retu
 ### Inbox ordering
 
 Conversation lists now sort newest activity first, put conversations without activity at the end, and use descending numeric IDs as a stable tie-breaker for pagination. A PostgREST query-builder test verifies the generated order expression. It does not validate PostgreSQL execution or the target RelayDesk schema.
+
+### Inbox count metadata
+
+The list endpoint returns Chatwoot's `mine_count`, `unassigned_count`, `assigned_count`, and `all_count` metadata. Counts are independent of the selected status tab, and the authenticated Supabase UUID is first mapped through `profiles.auth_user_id` to the numeric profile ID used by `conversations.assigned_to`. Eight Node tests now pass, including a mocked-HTTP PostgREST builder check that verifies the profile mapping and status-independent counts. Counts currently cover the workspace visible through RLS; inbox, team, label, and conversation-type filters are not implemented, so this is not full `ConversationFinder` parity.

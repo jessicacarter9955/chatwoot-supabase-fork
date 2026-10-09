@@ -1,4 +1,5 @@
 import { orderInboxConversations } from '../functions/inbox-read/conversation-order.ts';
+import { readConversationCounts } from '../functions/inbox-read/conversation-counts.ts';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createClient } from '@supabase/supabase-js';
@@ -147,4 +148,47 @@ test('inbox order puts empty threads last and breaks timestamp ties by id', asyn
     client.from('conversations').select('*')
   );
   assert.equal(error, null);
+});
+
+test('conversation counts stay independent of the selected status', async () => {
+  const requests = [];
+  const client = createClient(
+    'https://example.supabase.co',
+    'public-test-key',
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: async url => {
+          const params = new URL(url).searchParams;
+          requests.push(params);
+          if (params.has('auth_user_id')) {
+            assert.equal(params.get('auth_user_id'), 'eq.user-auth-1');
+            return new Response(JSON.stringify([{ id: 44 }]), {
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+          assert.equal(params.get('workspace_id'), 'eq.9');
+          assert.equal(params.get('select'), 'id');
+          assert.equal(params.get('status'), null);
+          const assignedTo = params.get('assigned_to');
+          const count = assignedTo === 'eq.44' ? 4 : assignedTo === 'is.null' ? 3 : 7;
+          return new Response(null, {
+            headers: { 'Content-Range': `0-0/${count}` },
+          });
+        },
+      },
+    }
+  );
+
+  const result = await readConversationCounts(client, 9, 'user-auth-1');
+  assert.equal(requests.length, 4);
+  assert.deepEqual(result, {
+    data: {
+      mine_count: 4,
+      unassigned_count: 3,
+      assigned_count: 4,
+      all_count: 7,
+    },
+    error: null,
+  });
 });

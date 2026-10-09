@@ -1,4 +1,5 @@
 import { orderInboxConversations } from './conversation-order.ts';
+import { readConversationCounts } from './conversation-counts.ts';
 import { readMessagePage } from './message-page.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -149,13 +150,16 @@ Deno.serve(async request => {
 
     let conversationQuery = supabase
       .from('conversations')
-      .select('id, workspace_id, provider_connection_id, provider, contact_id, assigned_to, status, snoozed_until, unread_count, last_message_at, created_at, updated_at, metadata', { count: 'exact' })
+      .select('id, workspace_id, provider_connection_id, provider, contact_id, assigned_to, status, snoozed_until, unread_count, last_message_at, created_at, updated_at, metadata')
       .eq('workspace_id', workspaceId);
     if (status !== 'all') conversationQuery = conversationQuery.eq('status', status);
-    const { data: conversations, count, error } = await orderInboxConversations(
+    const { data: conversations, error } = await orderInboxConversations(
       conversationQuery
     ).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
     if (error) return jsonResponse({ error: error.message }, 422);
+
+    const counts = await readConversationCounts(supabase, workspaceId, userData.user.id);
+    if (counts.error) return jsonResponse({ error: counts.error.message }, 422);
 
     const rows = conversations ?? [];
     const contactIds = [...new Set(rows.map(row => row.contact_id))];
@@ -202,7 +206,7 @@ Deno.serve(async request => {
       profilesById.get(row.assigned_to)
     ));
 
-    return jsonResponse({ data: { meta: { all_count: count ?? payload.length }, payload } });
+    return jsonResponse({ data: { meta: counts.data, payload } });
   }
 
   const conversationId = parseId(url.searchParams.get('conversationId'));
