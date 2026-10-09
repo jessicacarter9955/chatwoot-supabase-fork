@@ -153,7 +153,7 @@ test('inbox order puts empty threads last and breaks timestamp ties by id', asyn
   assert.equal(error, null);
 });
 
-test('conversation counts stay independent of the selected status', async () => {
+test('conversation counts follow the selected status like ConversationFinder', async () => {
   const requests = [];
   const client = createClient(
     'https://example.supabase.co',
@@ -172,7 +172,7 @@ test('conversation counts stay independent of the selected status', async () => 
           }
           assert.equal(params.get('workspace_id'), 'eq.9');
           assert.equal(params.get('select'), 'id');
-          assert.equal(params.get('status'), null);
+          assert.equal(params.get('status'), 'eq.open');
           const assignedTo = params.get('assigned_to');
           const count = assignedTo === 'eq.44' ? 4 : assignedTo === 'is.null' ? 3 : 7;
           return new Response(null, {
@@ -183,7 +183,7 @@ test('conversation counts stay independent of the selected status', async () => 
     }
   );
 
-  const result = await readConversationCounts(client, 9, 'user-auth-1');
+  const result = await readConversationCounts(client, 9, 'user-auth-1', 'open');
   assert.equal(requests.length, 4);
   assert.deepEqual(result, {
     data: {
@@ -194,6 +194,33 @@ test('conversation counts stay independent of the selected status', async () => 
     },
     error: null,
   });
+});
+
+test('all-status counts do not add a status filter', async () => {
+  const client = createClient(
+    'https://example.supabase.co',
+    'public-test-key',
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: async url => {
+          const params = new URL(url).searchParams;
+          if (params.has('auth_user_id')) {
+            return new Response(JSON.stringify([{ id: 44 }]), {
+              headers: { 'Content-Type': 'application/json' },
+            });
+          }
+          assert.equal(params.get('status'), null);
+          return new Response(null, {
+            headers: { 'Content-Range': '0-0/0' },
+          });
+        },
+      },
+    }
+  );
+  const result = await readConversationCounts(client, 9, 'user-auth-1', 'all');
+  assert.equal(result.error, null);
+  assert.equal(result.data.all_count, 0);
 });
 
 test('conversation count permission errors are returned instead of zero counts', async () => {
@@ -243,7 +270,8 @@ test('conversation count permission errors are returned instead of zero counts',
   const countsFailure = await readConversationCounts(
     countsFailureClient,
     9,
-    'user-auth-1'
+    'user-auth-1',
+    'open'
   );
   assert.equal(countsFailure.data, null);
   assert.equal(countsFailure.error.code, '42501');

@@ -15,6 +15,7 @@ export async function readConversationCounts(
   supabase: any,
   workspaceId: number,
   authUserId: string,
+  status: string,
   resolvedProfileId?: number
 ) {
   const profile =
@@ -23,11 +24,14 @@ export async function readConversationCounts(
       : { data: resolvedProfileId, error: null };
   if (profile.error) return { data: null, error: profile.error };
 
-  const baseQuery = () =>
-    supabase
+  const baseQuery = () => {
+    let query = supabase
       .from('conversations')
       .select('id', { count: 'exact', head: true })
       .eq('workspace_id', workspaceId);
+    if (status !== 'all') query = query.eq('status', status);
+    return query;
+  };
 
   const [all, mine, unassigned] = await Promise.all([
     baseQuery(),

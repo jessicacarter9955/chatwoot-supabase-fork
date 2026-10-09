@@ -179,6 +179,7 @@ Deno.serve(async request => {
       supabase,
       workspaceId,
       userData.user.id,
+      status,
       profile.data
     );
     if (counts.error) return jsonResponse({ error: counts.error.message }, 422);
