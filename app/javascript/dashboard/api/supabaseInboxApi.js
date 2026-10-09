@@ -51,11 +51,12 @@ const invokeRead = async params => {
 };
 
 export default {
-  list({ workspaceId, status = 'open', page = 1 }) {
+  list({ workspaceId, status = 'open', assigneeType = 'all', page = 1 }) {
     return invokeRead({
       action: 'list',
       workspaceId,
       status,
+      assigneeType,
       page,
     });
   },

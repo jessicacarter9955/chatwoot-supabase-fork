@@ -41,14 +41,18 @@ describe('Supabase inbox API', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     await expect(
-      SupabaseInboxApi.list({ workspaceId: '1', status: 'open' })
+      SupabaseInboxApi.list({
+        workspaceId: '1',
+        status: 'open',
+        assigneeType: 'me',
+      })
     ).resolves.toEqual({
       data: { data: { meta: { all_count: 0 }, payload: [] } },
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
       new URL(
-        'https://example.supabase.co/functions/v1/inbox-read?action=list&workspaceId=1&status=open&page=1'
+        'https://example.supabase.co/functions/v1/inbox-read?action=list&workspaceId=1&status=open&assigneeType=me&page=1'
       ),
       {
         headers: {

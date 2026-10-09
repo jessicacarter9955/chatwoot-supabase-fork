@@ -1,5 +1,9 @@
 import { orderInboxConversations } from './conversation-order.ts';
-import { readConversationCounts } from './conversation-counts.ts';
+import {
+  filterInboxConversations,
+  readConversationCounts,
+  resolveInboxProfileId,
+} from './conversation-counts.ts';
 import { readMessagePage } from './message-page.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -147,18 +151,36 @@ Deno.serve(async request => {
     if (!['open', 'pending', 'resolved', 'snoozed', 'all'].includes(status)) {
       return jsonResponse({ error: 'status_must_be_open_pending_resolved_snoozed_or_all' }, 422);
     }
+    const assigneeType = url.searchParams.get('assigneeType') ?? 'all';
+    if (!['all', 'me', 'unassigned', 'assigned'].includes(assigneeType)) {
+      return jsonResponse(
+        { error: 'assigneeType_must_be_all_me_unassigned_or_assigned' },
+        422
+      );
+    }
+    const profile = await resolveInboxProfileId(supabase, userData.user.id);
+    if (profile.error) return jsonResponse({ error: profile.error.message }, 422);
 
-    let conversationQuery = supabase
-      .from('conversations')
-      .select('id, workspace_id, provider_connection_id, provider, contact_id, assigned_to, status, snoozed_until, unread_count, last_message_at, created_at, updated_at, metadata')
-      .eq('workspace_id', workspaceId);
+    let conversationQuery = filterInboxConversations(
+      supabase
+        .from('conversations')
+        .select('id, workspace_id, provider_connection_id, provider, contact_id, assigned_to, status, snoozed_until, unread_count, last_message_at, created_at, updated_at, metadata')
+        .eq('workspace_id', workspaceId),
+      assigneeType,
+      profile.data
+    );
     if (status !== 'all') conversationQuery = conversationQuery.eq('status', status);
     const { data: conversations, error } = await orderInboxConversations(
       conversationQuery
     ).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
     if (error) return jsonResponse({ error: error.message }, 422);
 
-    const counts = await readConversationCounts(supabase, workspaceId, userData.user.id);
+    const counts = await readConversationCounts(
+      supabase,
+      workspaceId,
+      userData.user.id,
+      profile.data
+    );
     if (counts.error) return jsonResponse({ error: counts.error.message }, 422);
 
     const rows = conversations ?? [];

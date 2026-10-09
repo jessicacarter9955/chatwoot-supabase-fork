@@ -26,6 +26,7 @@ class ConversationApi extends ApiClient {
       return SupabaseInboxApi.list({
         workspaceId: this.accountIdFromRoute,
         status,
+        assigneeType,
         page,
       });
     }

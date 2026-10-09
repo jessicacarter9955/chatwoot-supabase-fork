@@ -1,13 +1,26 @@
-export async function readConversationCounts(
-  supabase: any,
-  workspaceId: number,
-  authUserId: string
-) {
+export async function resolveInboxProfileId(supabase: any, authUserId: string) {
   const profile = await supabase
     .from('profiles')
     .select('id')
     .eq('auth_user_id', authUserId)
     .maybeSingle();
+  if (profile.error) return { data: null, error: profile.error };
+  if (!profile.data) {
+    return { data: null, error: new Error('authenticated_profile_not_found') };
+  }
+  return { data: profile.data.id, error: null };
+}
+
+export async function readConversationCounts(
+  supabase: any,
+  workspaceId: number,
+  authUserId: string,
+  resolvedProfileId?: number
+) {
+  const profile =
+    resolvedProfileId === undefined
+      ? await resolveInboxProfileId(supabase, authUserId)
+      : { data: resolvedProfileId, error: null };
   if (profile.error) return { data: null, error: profile.error };
 
   const baseQuery = () =>
@@ -19,7 +32,7 @@ export async function readConversationCounts(
   const [all, mine, unassigned] = await Promise.all([
     baseQuery(),
     profile.data
-      ? baseQuery().eq('assigned_to', profile.data.id)
+      ? baseQuery().eq('assigned_to', profile.data)
       : Promise.resolve({ count: 0, error: null }),
     baseQuery().is('assigned_to', null),
   ]);
@@ -37,4 +50,21 @@ export async function readConversationCounts(
     },
     error: null,
   };
+}
+
+export function filterInboxConversations(
+  query: any,
+  assigneeType: string,
+  profileId: number
+) {
+  switch (assigneeType) {
+    case 'me':
+      return query.eq('assigned_to', profileId);
+    case 'unassigned':
+      return query.is('assigned_to', null);
+    case 'assigned':
+      return query.not('assigned_to', 'is', null);
+    default:
+      return query;
+  }
 }

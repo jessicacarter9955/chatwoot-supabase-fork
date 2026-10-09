@@ -1,5 +1,8 @@
 import { orderInboxConversations } from '../functions/inbox-read/conversation-order.ts';
-import { readConversationCounts } from '../functions/inbox-read/conversation-counts.ts';
+import {
+  filterInboxConversations,
+  readConversationCounts,
+} from '../functions/inbox-read/conversation-counts.ts';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createClient } from '@supabase/supabase-js';
@@ -244,4 +247,37 @@ test('conversation count permission errors are returned instead of zero counts',
   );
   assert.equal(countsFailure.data, null);
   assert.equal(countsFailure.error.code, '42501');
+});
+
+test('assignee tabs filter the PostgREST conversation query', async () => {
+  for (const [assigneeType, expected] of [
+    ['all', null],
+    ['me', 'eq.44'],
+    ['unassigned', 'is.null'],
+    ['assigned', 'not.is.null'],
+  ]) {
+    const client = createClient(
+      'https://example.supabase.co',
+      'public-test-key',
+      {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: {
+          fetch: async url => {
+            const params = new URL(url).searchParams;
+            assert.equal(params.get('assigned_to'), expected);
+            return new Response(JSON.stringify([]), {
+              headers: { 'Content-Type': 'application/json' },
+            });
+          },
+        },
+      }
+    );
+    const query = filterInboxConversations(
+      client.from('conversations').select('*'),
+      assigneeType,
+      44
+    );
+    const { error } = await query;
+    assert.equal(error, null);
+  }
 });
