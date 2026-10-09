@@ -40,7 +40,7 @@ The frontend inbox bridge has four passing unit tests covering authenticated rea
 
 ### Message history pagination
 
-Fixed initial history loading to return the latest 20 messages in display order, matching Chatwoot's `MessageFinder`. Older pages return 20, newer pages 100, and bounded history includes the lower cursor and excludes the upper cursor (up to 1000). Six Node tests exercise the real Supabase PostgREST query builder with mocked HTTP, including empty history and database errors. Run with Node 24: `node --test supabase/tests/message-page.test.mjs`. All six passed on October 8. This does not validate live database behavior or RLS.
+Fixed initial history loading to return the latest 20 messages in display order, matching Chatwoot's `MessageFinder`. Older pages return 20, newer pages 100, and bounded history includes the lower cursor and excludes the upper cursor (up to 1000). Seven Node tests exercise the real Supabase PostgREST query builder with mocked HTTP, including empty history and database errors. Run with Node 24: `node --test supabase/tests/inbox-queries.test.mjs`. All seven passed on October 9. This does not validate live database behavior or RLS.
 
 ### Local UI preview diagnostics (2026-10-08)
 
@@ -53,3 +53,6 @@ A temporary build restricted to the existing Button story confirms the failure i
 ### Additional runtime checks (2026-10-09)
 
 Using Histoire's resolved Vite server configuration, `ssrLoadModule('vue')` returned functions for both `resolveComponent` and `defineComponent`; the Vue package alias resolves correctly. This narrows the blank-story error to the Histoire collection/transform path, but does not yet identify the faulty transform. A one-story build that attempted to capture the transformed SFC stalled while consuming about 1 GB RAM and was stopped. `supabase db lint --local --schema public` was attempted with Supabase CLI 2.20.5; it could not connect to localhost:54322, and Docker is not installed. No local Postgres lint, migration run, or database verification has passed.
+### Inbox ordering
+
+Conversation lists now sort newest activity first, put conversations without activity at the end, and use descending numeric IDs as a stable tie-breaker for pagination. A PostgREST query-builder test verifies the generated order expression. It does not validate PostgreSQL execution or the target RelayDesk schema.

@@ -1,3 +1,4 @@
+import { orderInboxConversations } from '../functions/inbox-read/conversation-order.ts';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createClient } from '@supabase/supabase-js';
@@ -120,4 +121,30 @@ test('database errors are preserved for the HTTP handler', async () => {
   );
   assert.equal(result.error.code, '42501');
   assert.deepEqual(result.data, []);
+});
+
+test('inbox order puts empty threads last and breaks timestamp ties by id', async () => {
+  const client = createClient(
+    'https://example.supabase.co',
+    'public-test-key',
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: async url => {
+          const params = new URL(url).searchParams;
+          assert.equal(
+            params.get('order'),
+            'last_message_at.desc.nullslast,id.desc'
+          );
+          return new Response(JSON.stringify([]), {
+            headers: { 'Content-Type': 'application/json' },
+          });
+        },
+      },
+    }
+  );
+  const { error } = await orderInboxConversations(
+    client.from('conversations').select('*')
+  );
+  assert.equal(error, null);
 });

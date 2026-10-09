@@ -1,3 +1,4 @@
+import { orderInboxConversations } from './conversation-order.ts';
 import { readMessagePage } from './message-page.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
@@ -151,9 +152,9 @@ Deno.serve(async request => {
       .select('id, workspace_id, provider_connection_id, provider, contact_id, assigned_to, status, snoozed_until, unread_count, last_message_at, created_at, updated_at, metadata', { count: 'exact' })
       .eq('workspace_id', workspaceId);
     if (status !== 'all') conversationQuery = conversationQuery.eq('status', status);
-    const { data: conversations, count, error } = await conversationQuery
-      .order('last_message_at', { ascending: false })
-      .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
+    const { data: conversations, count, error } = await orderInboxConversations(
+      conversationQuery
+    ).range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
     if (error) return jsonResponse({ error: error.message }, 422);
 
     const rows = conversations ?? [];
