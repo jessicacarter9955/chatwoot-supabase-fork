@@ -37,6 +37,10 @@ The prototype migration and UI adapter target a fresh database created from this
 
 All inspected workspace and inbox entities above had RLS enabled. The listed read policies scope records through workspace membership; the metadata check does not prove end-to-end tenant isolation for the adapter. The active schema already has a richer, UUID-first model and explicit Chatwoot ID mappings, so adapting to it is preferable to applying the prototype migration. Do not enable the prototype adapter or apply its migration to RelayDesk. Remaining compatibility work includes conversation-ID semantics, enum translation, count/unread behavior, existing RPC semantics, and end-to-end RLS tests.
 
+### Read-only RelayDesk advisor review (2026-10-10)
+
+Supabase security and performance advisors were read without changing the project. Security reported four authenticated-callable `SECURITY DEFINER` functions (`claim_demo_workspace`, `create_workspace`, `is_workspace_admin`, and `is_workspace_member`) and disabled leaked-password protection. Their function definitions were inspected: all four check `auth.uid()`; `claim_demo_workspace` adds the authenticated caller to the configured demo workspace as an agent when that workspace is already populated. This is an advisor warning that still merits product/security review, not proof of an exploit. Password-protection configuration remains an admin action. Performance reported five unindexed foreign keys and 132 unused indexes; unused-index findings are informational, and no indexes were added or removed. Review these after workload and schema changes are understood.
+
 ## Local Supabase setup
 
 1. Install the Supabase CLI and run `supabase start` from the repository root.
