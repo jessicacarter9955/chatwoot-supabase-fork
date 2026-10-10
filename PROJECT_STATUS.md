@@ -1,6 +1,6 @@
 # Project status
 
-Updated: 2026-10-09 (Europe/Rome)
+Updated: 2026-10-10 (Europe/Rome)
 
 Green means the named deliverable was verified; yellow means partial implementation or verification; red means missing or blocked.
 
@@ -10,7 +10,7 @@ Green means the named deliverable was verified; yellow means partial implementat
 | Supabase inbox backend | 🟨 Partial | TypeScript Edge Functions and a fresh-database migration cover reads, status changes, queueing, and normalized ingest. Database integration has not been verified. |
 | Supabase frontend bridge unit tests | 🟩 Verified | Four tests passed on October 8: JWT read headers, refusal without a session, snooze timestamp conversion, and queued-message mapping. ESLint passed for the spec. These tests mock Supabase and do not verify a deployed backend. |
 | Inbox queries | 🟨 Unit verified, contract corrected | Eleven Node tests and four focused frontend API tests cover message pages, empty history, errors, stable ordering, status/inbox-scoped Chatwoot counts, and all/me/unassigned/assigned plus inbox filters. Counts map Supabase Auth UUID to numeric profile ID and preserve permission errors. Live DB verification remains pending; team/label/conversation-type filters are not represented in counts. |
-| Existing RelayDesk compatibility | 🟥 Blocked | UUID IDs and existing profiles/canned_responses differ from the prototype schema. Adapt and verify before any migration or enabling the bridge. |
+| Existing RelayDesk compatibility | 🟨 Schema inspected, adapter pending | Read-only Supabase MCP inspection on October 10 confirmed UUID primary keys plus bigint Chatwoot mappings, `conversations.display_id` without a unique index in returned metadata, existing `canned_responses`, teams, labels, and `conversation_reads`. RLS is enabled on all inspected entities, with workspace-membership policies. No database changes were made. Adapter, enum/count mapping, and end-to-end tenant-isolation verification remain. |
 | Gmail, Slack, WhatsApp integration | 🟥 Missing in migrated backend | Provider OAuth, inbound signature verification, and channel adapters remain. This status does not describe upstream Chatwoot capabilities. |
 | Provider delivery / scheduled sending | 🟥 Missing | A reply can be queued in the prototype; no verified worker delivers it to a provider. |
 | Quick replies / automation | 🟨 Partial | Quick-reply UI adapter and rule records exist; integration and automation execution remain. |

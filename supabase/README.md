@@ -22,7 +22,20 @@ RLS scopes user-visible rows to workspace membership. The outbox has no authenti
 
 ## Existing Supabase projects
 
-This migration and UI adapter currently target a fresh database created from this repository's migration. They are not yet compatible with an existing RelayDesk project: that schema uses UUID primary keys, links `profiles.id` directly to `auth.users.id`, and stores canned responses in `canned_responses`, while this adapter currently expects integer IDs, `profiles.auth_user_id`, and `quick_replies`. Do not enable `SUPABASE_AUTH_ENABLED` against that existing project or apply this migration there until the schema adapter and a non-destructive migration plan are completed.
+The prototype migration and UI adapter target a fresh database created from this repository's migration. They are not compatible with the active RelayDesk project yet. On 2026-10-10, the connected Supabase project was inspected in read-only mode through schema metadata and `pg_policies`; no database changes were made. Its current schema differs as follows:
+
+| Entity | RelayDesk schema observed | Adapter requirement |
+| --- | --- | --- |
+| Auth/profile | `profiles.id` is UUID and references `auth.users.id`; no `auth_user_id` column. A unique `chatwoot_id` bigint exists. `workspace_members.user_id` is UUID. | Use `auth.uid()` as the profile UUID and keep Chatwoot numeric identity separate. |
+| Workspaces | UUID `id`, unique bigint `chatwoot_id`; memberships use UUID workspace IDs. | Resolve route/account Chatwoot ID to the UUID before data queries and membership checks. |
+| Inboxes | UUID `id`, bigint `chatwoot_id`; conversations reference `inbox_id` UUID. | Resolve the selected Chatwoot inbox ID to its UUID; filter conversations on `inbox_id`. |
+| Contacts | UUID `id`, unique `(workspace_id, chatwoot_id)`; fields include `name`, `email`, `phone`, `avatar_url`, and `identifier`. | Map API contact IDs from `chatwoot_id`; use UUID for foreign keys. |
+| Conversations | UUID `id`, numeric `display_id`, UUID `workspace_id`, `inbox_id`, `contact_id`, `assignee_id`, and `team_id`; `last_activity_at`; no `chatwoot_id` or `unread_count` column observed. No unique display-ID index was returned by the schema inspection. | Resolve internal conversation UUIDs and separately verify `display_id` uniqueness/scoping before using it as the Chatwoot URL/API ID. Derive unread state from `conversation_reads` and messages. |
+| Messages | UUID `id`, unique `(workspace_id, chatwoot_id)`; UUID `conversation_id`, `sender_contact_id`, `sender_user_id`; `direction`, `kind`, `private`, `content`, and delivery timestamps. | Map message API ID through `chatwoot_id`; preserve UUID foreign keys and translate direction/status enums. |
+| Quick replies | `canned_responses` with UUID ID, bigint `chatwoot_id`, UUID workspace, `short_code`, and `content`. | Reuse this table; do not create `quick_replies` in RelayDesk. |
+| Teams and labels | `teams`, `team_members`, `labels`, `conversation_labels` exist with UUID relationships; teams and labels also expose bigint `chatwoot_id`. | Add filters by resolving numeric Chatwoot IDs to UUIDs and joining the existing membership/link tables. |
+
+All inspected workspace and inbox entities above had RLS enabled. The listed read policies scope records through workspace membership; the metadata check does not prove end-to-end tenant isolation for the adapter. The active schema already has a richer, UUID-first model and explicit Chatwoot ID mappings, so adapting to it is preferable to applying the prototype migration. Do not enable the prototype adapter or apply its migration to RelayDesk. Remaining compatibility work includes conversation-ID semantics, enum translation, count/unread behavior, existing RPC semantics, and end-to-end RLS tests.
 
 ## Local Supabase setup
 
