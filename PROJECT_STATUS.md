@@ -1,6 +1,6 @@
 # Project status
 
-Updated: 2026-10-10 (Europe/Rome)
+Updated: 2026-10-11 (Europe/Rome)
 
 Green means the named deliverable was verified; yellow means partial implementation or verification; red means missing or blocked.
 
@@ -21,7 +21,7 @@ Green means the named deliverable was verified; yellow means partial implementat
 | Full frontend suite | 🟨 Incomplete | Latest broad run recorded 5,157 passing tests and two worker fetch timeouts (exit 1). Earlier billing assertion failures were fixed; their focused rerun passed 11 tests. |
 | Local CSS build | 🟩 Verified | Added missing direct postcss-import dependency; all four PostCSS plugins load and CSS compilation passes. Histoire binds to IPv4 localhost. |
 | Runtime / screenshots | 🟥 Unverified | No valid screenshot of a running inbox. Ruby/Postgres/Redis/Docker were unavailable locally; Histoire still shows zero stories after fixing its missing CSS dependency. Vue exports resolveComponent and defineComponent correctly in Histoire Vite SSR; a one-story Button build still fails in Histoire Vue collection with `resolveComponent is not a function`. Histoire 0.17.15 declares Vite <=5 compatibility while Vite 6.4.2 is installed; cause is not proven. Alternate probes stalled. Screenshot remains blank and is not UI verification. |
-| GitHub | 🟨 Destination pending | GitHub connector branch search on October 10 confirmed there is no `codex/supabase-inbox` branch in the private personal repository. Previous direct pushes stalled or ended with HTTP 408. Commits through `cb79ff6e9` are pushed and SHA-verified on the existing public personal fork. HTTP/1.1 with a larger request buffer also failed; the GitHub REST import endpoint is deprecated (404). Private delivery remains unresolved. |
+| GitHub | 🟨 Destination pending | On October 11, GitHub metadata confirmed the private personal repository is empty (`size: 0`), with push permission; its `codex/supabase-inbox` branch search returned no branch. A direct push attempt again produced no response after about 70 seconds and was stopped; no force push was used. The existing public personal fork is synced and SHA-verified through `3a7394d73`. Earlier HTTP/1.1 with a larger request buffer also failed; the GitHub REST import endpoint is deprecated (404). Private delivery remains unresolved. |
 
 ## Next tasks
 
