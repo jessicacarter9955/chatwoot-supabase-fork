@@ -5,6 +5,7 @@ import {
   resolveInboxProfileId,
 } from './conversation-counts.ts';
 import { readMessagePage } from './message-page.ts';
+import { mapInboxMessage } from './message-mapping.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
@@ -48,40 +49,6 @@ function mapContact(contact: Record<string, any> | undefined) {
   };
 }
 
-function mapMessage(
-  message: Record<string, any>,
-  inboxId: number,
-  contact: Record<string, any> | null,
-  profile?: Record<string, any>
-) {
-  const isInbound = message.direction === 'inbound';
-  return {
-    id: message.id,
-    content: message.content,
-    inbox_id: inboxId,
-    conversation_id: message.conversation_id,
-    message_type: isInbound ? 0 : message.direction === 'outbound' ? 1 : 2,
-    content_type: 'text',
-    status:
-      message.delivery_status === 'queued'
-        ? 'pending'
-        : (message.delivery_status ?? 'sent'),
-    content_attributes: message.metadata ?? {},
-    created_at: unixSeconds(message.created_at),
-    private: message.direction === 'note',
-    sender: message.author_user_id
-      ? {
-          id: message.author_user_id,
-          name: profile?.full_name ?? message.author_name,
-          thumbnail: profile?.avatar_url,
-        }
-      : isInbound
-        ? contact
-        : { id: null, name: message.author_name },
-    attachments: [],
-  };
-}
-
 function mapConversation(
   conversation: Record<string, any>,
   contact: Record<string, any> | undefined,
@@ -108,10 +75,20 @@ function mapConversation(
     additional_attributes: conversation.metadata ?? {},
     custom_attributes: {},
     messages: lastMessage
-      ? [mapMessage(lastMessage, conversation.provider_connection_id, sender)]
+      ? [
+          mapInboxMessage(
+            lastMessage,
+            conversation.provider_connection_id,
+            sender
+          ),
+        ]
       : [],
     last_non_activity_message: lastMessage
-      ? mapMessage(lastMessage, conversation.provider_connection_id, sender)
+      ? mapInboxMessage(
+          lastMessage,
+          conversation.provider_connection_id,
+          sender
+        )
       : null,
     meta: {
       sender,
@@ -410,7 +387,9 @@ Deno.serve(async request => {
     if (error) return jsonResponse({ error: error.message }, 422);
     const authorIds = [
       ...new Set(
-        orderedMessages.map(message => message.author_user_id).filter(Boolean)
+        orderedMessages
+          .map(message => message.author_user_id ?? message.sender_user_id)
+          .filter(Boolean)
       ),
     ];
     const [contactResult, authorsResult] = await Promise.all([
@@ -435,11 +414,11 @@ Deno.serve(async request => {
     return jsonResponse({
       meta: { labels: [], additional_attributes: conversation.metadata ?? {} },
       payload: orderedMessages.map(message =>
-        mapMessage(
+        mapInboxMessage(
           message,
           conversation.provider_connection_id,
           contact,
-          authorsById.get(message.author_user_id)
+          authorsById.get(message.author_user_id ?? message.sender_user_id)
         )
       ),
     });
