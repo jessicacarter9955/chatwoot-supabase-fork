@@ -6,6 +6,7 @@ import {
 } from './conversation-counts.ts';
 import { readMessagePage } from './message-page.ts';
 import { mapInboxMessage } from './message-mapping.ts';
+import { readInboxAttachments } from './attachment-mapping.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
@@ -54,7 +55,8 @@ function mapConversation(
   contact: Record<string, any> | undefined,
   connection: Record<string, any> | undefined,
   lastMessage: Record<string, any> | null,
-  assignee: Record<string, any> | undefined
+  assignee: Record<string, any> | undefined,
+  attachments: Array<Record<string, any>> = []
 ) {
   const sender = mapContact(contact);
   return {
@@ -79,7 +81,9 @@ function mapConversation(
           mapInboxMessage(
             lastMessage,
             conversation.provider_connection_id,
-            sender
+            sender,
+            undefined,
+            attachments
           ),
         ]
       : [],
@@ -87,7 +91,9 @@ function mapConversation(
       ? mapInboxMessage(
           lastMessage,
           conversation.provider_connection_id,
-          sender
+          sender,
+          undefined,
+          attachments
         )
       : null,
     meta: {
@@ -244,6 +250,14 @@ Deno.serve(async request => {
       latestMessages.find(item => item.error)?.error;
     if (queryError) return jsonResponse({ error: queryError.message }, 422);
 
+    const attachmentsResult = await readInboxAttachments(
+      supabase,
+      latestMessages.map(item => item.message).filter(Boolean),
+      workspaceId
+    );
+    if (attachmentsResult.error)
+      return jsonResponse({ error: attachmentsResult.error.message }, 422);
+
     const contactsById = new Map(
       (contactsResult.data ?? []).map(item => [item.id, item])
     );
@@ -263,15 +277,17 @@ Deno.serve(async request => {
     const messagesByConversationId = new Map(
       latestMessages.map(item => [item.conversationId, item.message])
     );
-    const payload = rows.map(row =>
-      mapConversation(
+    const payload = rows.map(row => {
+      const lastMessage = messagesByConversationId.get(row.id) ?? null;
+      return mapConversation(
         row,
         contactsById.get(row.contact_id),
         connectionsById.get(row.provider_connection_id),
-        messagesByConversationId.get(row.id) ?? null,
-        profilesById.get(row.assigned_to)
-      )
-    );
+        lastMessage,
+        profilesById.get(row.assigned_to),
+        lastMessage ? (attachmentsResult.data.get(lastMessage.id) ?? []) : []
+      );
+    });
 
     return jsonResponse({ data: { meta: counts.data, payload } });
   }
@@ -336,6 +352,13 @@ Deno.serve(async request => {
       latestMessageResult.error ??
       assigneeResult.error;
     if (queryError) return jsonResponse({ error: queryError.message }, 422);
+    const attachmentsResult = await readInboxAttachments(
+      supabase,
+      latestMessageResult.data ? [latestMessageResult.data] : [],
+      workspaceId
+    );
+    if (attachmentsResult.error)
+      return jsonResponse({ error: attachmentsResult.error.message }, 422);
     const sender = mapContact(contactResult.data);
     const assignee = assigneeResult.data
       ? {
@@ -349,7 +372,10 @@ Deno.serve(async request => {
       contactResult.data,
       connectionResult.data,
       latestMessageResult.data,
-      assignee
+      assignee,
+      latestMessageResult.data
+        ? (attachmentsResult.data.get(latestMessageResult.data.id) ?? [])
+        : []
     );
     return jsonResponse({
       ...result,
@@ -385,6 +411,13 @@ Deno.serve(async request => {
       afterId
     );
     if (error) return jsonResponse({ error: error.message }, 422);
+    const attachmentsResult = await readInboxAttachments(
+      supabase,
+      orderedMessages,
+      workspaceId
+    );
+    if (attachmentsResult.error)
+      return jsonResponse({ error: attachmentsResult.error.message }, 422);
     const authorIds = [
       ...new Set(
         orderedMessages
@@ -418,7 +451,8 @@ Deno.serve(async request => {
           message,
           conversation.provider_connection_id,
           contact,
-          authorsById.get(message.author_user_id ?? message.sender_user_id)
+          authorsById.get(message.author_user_id ?? message.sender_user_id),
+          attachmentsResult.data.get(message.id) ?? []
         )
       ),
     });

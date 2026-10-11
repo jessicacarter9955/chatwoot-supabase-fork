@@ -6,7 +6,8 @@ export function mapInboxMessage(
   message: Record<string, any>,
   inboxId: number,
   contact: Record<string, any> | null,
-  profile?: Record<string, any>
+  profile?: Record<string, any>,
+  attachments: Array<Record<string, any>> = []
 ) {
   const isInbound =
     message.direction === 'inbound' || message.direction === 'incoming';
@@ -50,6 +51,6 @@ export function mapInboxMessage(
       : isInbound
         ? contact
         : { id: null, name: message.author_name },
-    attachments: [],
+    attachments,
   };
 }

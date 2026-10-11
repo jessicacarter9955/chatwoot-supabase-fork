@@ -24,6 +24,8 @@ RLS scopes user-visible rows to workspace membership. The outbox has no authenti
 
 The prototype migration and UI adapter target a fresh database created from this repository's migration. They are not compatible with the active RelayDesk project yet. On 2026-10-10, the connected Supabase project was inspected in read-only mode through schema metadata and `pg_policies`; no database changes were made. Its current schema differs as follows:
 
+The read-only storage audit on 2026-10-11 found a `message_attachments` table and private `message-attachments` bucket with workspace-scoped Storage policies. The table had zero rows while `messages` had 11. RelayDesk's object policy expects a UUID workspace ID in the first path segment; the prototype migration below assumes a numeric workspace ID. The migration and storage policy must not be applied to RelayDesk. The Edge read path generates user-scoped, one-hour signed URLs, but this project has no existing attachment row to verify those URLs against.
+
 | Entity | RelayDesk schema observed | Adapter requirement |
 | --- | --- | --- |
 | Auth/profile | `profiles.id` is UUID and references `auth.users.id`; no `auth_user_id` column. A unique `chatwoot_id` bigint exists. `workspace_members.user_id` is UUID. | Use `auth.uid()` as the profile UUID and keep Chatwoot numeric identity separate. |
@@ -50,7 +52,7 @@ Supabase security and performance advisors were read without changing the projec
 5. Add `<APP_ORIGIN>/app/login` to Supabase Auth's allowed redirect URLs, and configure signup confirmation email delivery before enabling self-registration.
 6. Set `APP_ORIGIN` to the UI origin for the Edge Functions, and set a high-entropy `INGEST_WEBHOOK_SECRET` for trusted server-side callers of `ingest-message`.
 
-With `SUPABASE_AUTH_ENABLED=false` (the default), Chatwoot keeps its existing Rails authentication and API. When enabled, the email login/signup and dashboard bootstrap use Supabase Auth, and the existing inbox stores route core list/thread/history/status/reply calls through the Supabase adapter. Canned responses use the Supabase `quick_replies` table. This first UI slice supports inbox and assignee-tab filtering, but does not yet cover team/label/conversation-type filters, unread counts, private notes, attachments, assignment changes, or realtime updates. Outbound messages remain queued until a provider delivery worker is added. Other Chatwoot settings and ancillary dashboard APIs can still call Rails, so this is a staged migration rather than a Rails-free deployment.
+With `SUPABASE_AUTH_ENABLED=false` (the default), Chatwoot keeps its existing Rails authentication and API. When enabled, the email login/signup and dashboard bootstrap use Supabase Auth, and the existing inbox stores route core list/thread/history/status/reply calls through the Supabase adapter. Canned responses use the Supabase `quick_replies` table. The read API now includes private-bucket attachment metadata and time-limited signed URLs for message history and latest-message previews; composer upload/send attachment support is still missing. The first UI slice supports inbox and assignee-tab filtering, but does not yet cover team/label/conversation-type filters, RelayDesk unread-count semantics, assignment changes, or realtime updates. Outbound messages remain queued until a provider delivery worker is added. Other Chatwoot settings and ancillary dashboard APIs can still call Rails, so this is a staged migration rather than a Rails-free deployment.
 ## Verification status (2026-10-08)
 
 The frontend inbox bridge has four passing unit tests covering authenticated read headers, rejection without a session, snooze timestamp conversion, and queued-message mapping. Supabase is mocked in these tests: they are not evidence that database migrations, RLS, deployed functions, or provider delivery work end to end. The latest broad frontend run recorded 5,157 passing tests but ended with two Vitest worker fetch timeouts, so the full suite remains incomplete. No valid running-inbox screenshot has been captured. See `PROJECT_STATUS.md` for remaining work and verified progress.
@@ -70,6 +72,10 @@ A temporary build restricted to the existing Button story confirms the failure i
 ### Additional runtime checks (2026-10-09)
 
 Using Histoire's resolved Vite server configuration, `ssrLoadModule('vue')` returned functions for both `resolveComponent` and `defineComponent`; the Vue package alias resolves correctly. This narrows the blank-story error to the Histoire collection/transform path, but does not yet identify the faulty transform. A one-story build that attempted to capture the transformed SFC stalled while consuming about 1 GB RAM and was stopped. `supabase db lint --local --schema public` was attempted with Supabase CLI 2.20.5; it could not connect to localhost:54322, and Docker is not installed. No local Postgres lint, migration run, or database verification has passed.
+
+### Attachment migration verification (2026-10-11)
+
+The new prototype attachment migration and Edge read path pass 21 focused Node tests and Node's TypeScript syntax check. Prettier and `git diff --check` pass. `supabase db lint --local --schema public` still cannot reach PostgreSQL at `127.0.0.1:54322`, so the migration and Storage policies have not been executed locally. The connected RelayDesk schema was inspected read-only; no migration was applied there.
 ### Inbox ordering
 
 Conversation lists now sort newest activity first, put conversations without activity at the end, and use descending numeric IDs as a stable tie-breaker for pagination. A PostgREST query-builder test verifies the generated order expression. It does not validate PostgreSQL execution or the target RelayDesk schema.
