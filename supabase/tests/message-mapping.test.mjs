@@ -59,3 +59,45 @@ test('inbound and outbound public messages preserve Chatwoot message types', () 
     thumbnail: undefined,
   });
 });
+
+test('RelayDesk direction enum maps incoming and outgoing to public messages', () => {
+  const incoming = mapInboxMessage(
+    { direction: 'incoming', content: 'Hi' },
+    17,
+    { id: 'contact-1' }
+  );
+  const outgoing = mapInboxMessage(
+    { direction: 'outgoing', content: 'Hello' },
+    17,
+    null
+  );
+
+  assert.equal(incoming.message_type, 0);
+  assert.equal(incoming.private, false);
+  assert.deepEqual(incoming.sender, { id: 'contact-1' });
+  assert.equal(outgoing.message_type, 1);
+  assert.equal(outgoing.private, false);
+});
+
+test('RelayDesk internal direction is private and delivery timestamps map status', () => {
+  const internal = mapInboxMessage(
+    { direction: 'internal', content: 'Team note' },
+    17,
+    null
+  );
+  const read = mapInboxMessage(
+    { direction: 'outgoing', read_at: '2026-10-11T08:00:00.000Z' },
+    17,
+    null
+  );
+  const failed = mapInboxMessage(
+    { direction: 'outgoing', failed_at: '2026-10-11T08:00:00.000Z' },
+    17,
+    null
+  );
+
+  assert.equal(internal.private, true);
+  assert.equal(internal.message_type, 2);
+  assert.equal(read.status, 'read');
+  assert.equal(failed.status, 'failed');
+});
