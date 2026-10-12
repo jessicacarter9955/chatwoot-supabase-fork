@@ -110,10 +110,22 @@ class ConversationApi extends ApiClient {
   }
 
   markMessageRead({ id }) {
+    if (isSupabaseAuthEnabled()) {
+      return SupabaseInboxApi.markMessageRead({
+        workspaceId: this.accountIdFromRoute,
+        conversationId: id,
+      });
+    }
     return axios.post(`${this.url}/${id}/update_last_seen`);
   }
 
   markMessagesUnread({ id }) {
+    if (isSupabaseAuthEnabled()) {
+      return SupabaseInboxApi.markMessagesUnread({
+        workspaceId: this.accountIdFromRoute,
+        conversationId: id,
+      });
+    }
     return axios.post(`${this.url}/${id}/unread`);
   }
 

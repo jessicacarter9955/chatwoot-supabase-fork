@@ -7,6 +7,7 @@ import {
 import { readMessagePage } from './message-page.ts';
 import { mapInboxMessage } from './message-mapping.ts';
 import { readInboxAttachments } from './attachment-mapping.ts';
+import { readPerUserUnreadCounts } from './unread-counts.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
@@ -201,6 +202,15 @@ Deno.serve(async request => {
     if (counts.error) return jsonResponse({ error: counts.error.message }, 422);
 
     const rows = conversations ?? [];
+    const unreadCounts = await readPerUserUnreadCounts(
+      supabase,
+      workspaceId,
+      profile.data,
+      rows
+    );
+    if (unreadCounts.error) {
+      return jsonResponse({ error: unreadCounts.error.message }, 422);
+    }
     const contactIds = [...new Set(rows.map(row => row.contact_id))];
     const connectionIds = [
       ...new Set(rows.map(row => row.provider_connection_id)),
@@ -280,7 +290,10 @@ Deno.serve(async request => {
     const payload = rows.map(row => {
       const lastMessage = messagesByConversationId.get(row.id) ?? null;
       return mapConversation(
-        row,
+        {
+          ...row,
+          unread_count: unreadCounts.data.get(row.id) ?? row.unread_count,
+        },
         contactsById.get(row.contact_id),
         connectionsById.get(row.provider_connection_id),
         lastMessage,

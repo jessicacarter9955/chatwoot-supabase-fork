@@ -1,4 +1,5 @@
 import { getSupabaseClient } from './supabaseClient';
+import SupabaseConversationReadApi from './supabaseConversationReadApi';
 
 const functionErrorMessage = async error => {
   if (error?.context instanceof Response) {
@@ -79,6 +80,20 @@ export default {
       conversationId,
       before,
       after,
+    });
+  },
+
+  markMessageRead({ workspaceId, conversationId }) {
+    return SupabaseConversationReadApi.markRead({
+      workspaceId,
+      conversationId,
+    });
+  },
+
+  markMessagesUnread({ workspaceId, conversationId }) {
+    return SupabaseConversationReadApi.markUnread({
+      workspaceId,
+      conversationId,
     });
   },
 
