@@ -89,6 +89,7 @@ class DashboardController < ActionController::Base
       SUPABASE_URL: ENV.fetch('SUPABASE_URL', ''),
       SUPABASE_ANON_KEY: ENV.fetch('SUPABASE_ANON_KEY', ''),
       SUPABASE_AUTH_ENABLED: supabase_auth_enabled?,
+      SUPABASE_SCHEMA: ENV.fetch('SUPABASE_SCHEMA', 'prototype'),
       AZURE_APP_ID: GlobalConfigService.load('AZURE_APP_ID', ''),
       GIT_SHA: GIT_HASH,
       ALLOWED_LOGIN_METHODS: allowed_login_methods,

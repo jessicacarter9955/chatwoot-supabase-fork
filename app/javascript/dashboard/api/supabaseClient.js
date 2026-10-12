@@ -5,6 +5,9 @@ let supabaseClient;
 export const isSupabaseAuthEnabled = () =>
   window.globalConfig?.SUPABASE_AUTH_ENABLED === true;
 
+export const isRelayDeskSchema = () =>
+  window.globalConfig?.SUPABASE_SCHEMA === 'relaydesk';
+
 export const getSupabaseClient = () => {
   if (supabaseClient) return supabaseClient;
 
@@ -32,12 +35,20 @@ export const getSupabaseCurrentUser = async () => {
   if (userError) throw new Error(userError.message);
   if (!userData.user) return null;
 
-  const { data: profile, error: profileError } = await client
+  const relayDesk = isRelayDeskSchema();
+  const profileQuery = client
     .from('profiles')
-    .select('id, full_name, avatar_url')
-    .eq('auth_user_id', userData.user.id)
-    .single();
+    .select(
+      relayDesk
+        ? 'id, full_name, avatar_url, chatwoot_id'
+        : 'id, full_name, avatar_url'
+    )
+    .eq(relayDesk ? 'id' : 'auth_user_id', userData.user.id);
+  const { data: profile, error: profileError } = await profileQuery.single();
   if (profileError) throw new Error(profileError.message);
+  if (relayDesk && !profile.chatwoot_id) {
+    throw new Error('RelayDesk profile is missing its Chatwoot user ID');
+  }
 
   const { data: memberships, error: membershipsError } = await client
     .from('workspace_members')
@@ -49,10 +60,17 @@ export const getSupabaseCurrentUser = async () => {
   const { data: workspaces, error: workspacesError } = workspaceIds.length
     ? await client
         .from('workspaces')
-        .select('id, name, created_at')
+        .select(
+          relayDesk
+            ? 'id, name, created_at, chatwoot_id'
+            : 'id, name, created_at'
+        )
         .in('id', workspaceIds)
     : { data: [], error: null };
   if (workspacesError) throw new Error(workspacesError.message);
+  if (relayDesk && workspaces?.some(workspace => !workspace.chatwoot_id)) {
+    throw new Error('RelayDesk workspace is missing its Chatwoot account ID');
+  }
 
   const roleByWorkspace = new Map(
     memberships.map(item => [item.workspace_id, item.role])
@@ -60,7 +78,8 @@ export const getSupabaseCurrentUser = async () => {
   const accounts = (workspaces || []).map(workspace => {
     const role = roleByWorkspace.get(workspace.id);
     return {
-      id: workspace.id,
+      id: relayDesk ? workspace.chatwoot_id : workspace.id,
+      ...(relayDesk ? { supabase_id: workspace.id } : {}),
       name: workspace.name,
       role: role === 'owner' || role === 'admin' ? 'administrator' : 'agent',
       status: 'active',
@@ -71,7 +90,8 @@ export const getSupabaseCurrentUser = async () => {
   });
 
   return {
-    id: profile.id,
+    id: relayDesk ? profile.chatwoot_id : profile.id,
+    ...(relayDesk ? { supabase_id: profile.id } : {}),
     auth_user_id: userData.user.id,
     name: profile.full_name || userData.user.email,
     email: userData.user.email,
