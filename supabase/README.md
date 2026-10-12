@@ -11,6 +11,7 @@ This directory is the first TypeScript/Supabase backend slice for the unified in
 - `queue-reply` validates a Supabase user session and atomically queues an outbound reply through the database RPC. `clientRequestId` makes retrying a UI request idempotent.
 - `update-conversation-status` supports Chatwoot's open, pending, resolved, and snoozed states; snoozes require a future wake time. A new inbound message reopens resolved, pending, or snoozed conversations.
 - `inbox-read` exposes the first Chatwoot-shaped read contract for a paginated conversation list, conversation detail, and message history. It uses the caller's JWT and RLS rather than a service-role key.
+- The inbox message mapper preserves RelayDesk inbound HTML email bodies as Chatwoot `incoming_email` content attributes, so Chatwoot can render them with its email renderer and sanitizer instead of flattening them to text.
 - Chatwoot's existing canned-response settings screen now reads and writes `quick_replies` directly through the authenticated Supabase client.
 - `ingest-message` ports OpenChannels' normalized ingest behavior. A trusted provider adapter can upsert contacts, conversations, and deduplicated messages through one transactional database function.
 

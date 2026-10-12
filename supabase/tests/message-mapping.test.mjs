@@ -79,6 +79,66 @@ test('RelayDesk direction enum maps incoming and outgoing to public messages', (
   assert.equal(outgoing.private, false);
 });
 
+test('RelayDesk inbound HTML messages use Chatwoot email content attributes', () => {
+  const mapped = mapInboxMessage(
+    {
+      id: 'message-html',
+      direction: 'incoming',
+      kind: 'html',
+      content: 'A plain text version',
+      content_html: '<p>A <strong>formatted</strong> email</p>',
+      metadata: { email: { subject: 'Hello' } },
+    },
+    3,
+    null
+  );
+
+  assert.equal(mapped.content_type, 'incoming_email');
+  assert.equal(mapped.content, 'A plain text version');
+  assert.deepEqual(mapped.content_attributes, {
+    email: {
+      subject: 'Hello',
+      html_content: { full: '<p>A <strong>formatted</strong> email</p>' },
+      text_content: { full: 'A plain text version' },
+    },
+  });
+});
+
+test('HTML email mapping keeps provider email bodies already in metadata', () => {
+  const mapped = mapInboxMessage(
+    {
+      direction: 'incoming',
+      kind: 'html',
+      content: 'Fallback text',
+      content_html: '<p>Stored html</p>',
+      metadata: {
+        email: {
+          html_content: {
+            full: '<p>Provider html</p>',
+            quoted: '<blockquote />',
+          },
+          text_content: { full: 'Provider text' },
+        },
+      },
+    },
+    3,
+    null
+  );
+
+  assert.equal(
+    mapped.content_attributes.email.html_content.full,
+    '<p>Provider html</p>'
+  );
+  assert.equal(
+    mapped.content_attributes.email.html_content.quoted,
+    '<blockquote />'
+  );
+  assert.equal(
+    mapped.content_attributes.email.text_content.full,
+    'Provider text'
+  );
+});
+
 test('RelayDesk internal direction is private and delivery timestamps map status', () => {
   const internal = mapInboxMessage(
     { direction: 'internal', content: 'Team note' },

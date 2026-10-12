@@ -20,6 +20,30 @@ export function mapInboxMessage(
     message.private === true ||
     message.direction === 'note' ||
     message.direction === 'internal';
+  const isInboundHtmlEmail =
+    isInbound &&
+    message.kind === 'html' &&
+    typeof message.content_html === 'string';
+  const contentAttributes = message.metadata ?? {};
+  const emailAttributes = contentAttributes.email ?? {};
+  const htmlContent = emailAttributes.html_content ?? {};
+  const textContent = emailAttributes.text_content ?? {};
+  const mappedContentAttributes = isInboundHtmlEmail
+    ? {
+        ...contentAttributes,
+        email: {
+          ...emailAttributes,
+          html_content: {
+            ...htmlContent,
+            full: htmlContent.full ?? message.content_html,
+          },
+          text_content: {
+            ...textContent,
+            full: textContent.full ?? message.content ?? '',
+          },
+        },
+      }
+    : contentAttributes;
   const authorUserId = message.author_user_id ?? message.sender_user_id;
   const status =
     message.delivery_status ??
@@ -37,9 +61,9 @@ export function mapInboxMessage(
     inbox_id: inboxId,
     conversation_id: message.conversation_id,
     message_type: isPrivate ? 2 : isInbound ? 0 : isOutbound ? 1 : 2,
-    content_type: 'text',
+    content_type: isInboundHtmlEmail ? 'incoming_email' : 'text',
     status: status === 'queued' ? 'pending' : status,
-    content_attributes: message.metadata ?? {},
+    content_attributes: mappedContentAttributes,
     created_at: unixSeconds(message.created_at),
     private: isPrivate,
     sender: authorUserId
