@@ -9,6 +9,7 @@ import { mapInboxMessage } from './message-mapping.ts';
 import { readInboxAttachments } from './attachment-mapping.ts';
 import { readPerUserUnreadCounts } from './unread-counts.ts';
 import { readRelayDeskConversationList } from './relaydesk-list.ts';
+import { readRelayDeskConversation } from './relaydesk-thread.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
@@ -152,11 +153,44 @@ Deno.serve(async request => {
     );
   }
   if (schema === 'relaydesk') {
-    if (action !== 'list') {
+    if (!['list', 'thread', 'messages'].includes(action ?? '')) {
       return jsonResponse(
         { error: 'relaydesk_action_not_supported_yet', action },
         501
       );
+    }
+    if (action === 'thread' || action === 'messages') {
+      const conversationId = parseId(url.searchParams.get('conversationId'));
+      if (!conversationId) {
+        return jsonResponse(
+          { error: 'conversationId_must_be_a_positive_integer' },
+          422
+        );
+      }
+      const before = url.searchParams.has('before')
+        ? parseId(url.searchParams.get('before'))
+        : null;
+      const after = url.searchParams.has('after')
+        ? parseId(url.searchParams.get('after'))
+        : null;
+      if (url.searchParams.has('before') && !before) {
+        return jsonResponse(
+          { error: 'before_must_be_a_positive_integer' },
+          422
+        );
+      }
+      if (url.searchParams.has('after') && !after) {
+        return jsonResponse({ error: 'after_must_be_a_positive_integer' }, 422);
+      }
+      const relayDeskResult = await readRelayDeskConversation(supabase, {
+        workspaceChatwootId: workspaceId,
+        conversationChatwootId: conversationId,
+        authUserId: userData.user.id,
+        action,
+        before,
+        after,
+      });
+      return jsonResponse(relayDeskResult.body, relayDeskResult.status);
     }
     const inboxId = url.searchParams.has('inboxId')
       ? parseId(url.searchParams.get('inboxId'))

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { createClient } from '@supabase/supabase-js';
 import { readRelayDeskConversationList } from '../functions/inbox-read/relaydesk-list.ts';
+import { readRelayDeskConversation } from '../functions/inbox-read/relaydesk-thread.ts';
 
 const ids = {
   authUser: 'auth-user-uuid',
@@ -206,4 +207,57 @@ test('treats inbound messages as unread until the user has a cursor', async () =
   });
   assert.equal(result.status, 200);
   assert.equal(result.body.data.payload[0].unread_count, 1);
+});
+
+test('maps RelayDesk conversation detail and latest message', async () => {
+  const { client } = createRelayDeskClient();
+  const result = await readRelayDeskConversation(client, {
+    workspaceChatwootId: 42,
+    conversationChatwootId: 101,
+    action: 'thread',
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(result.body.id, 101);
+  assert.equal(result.body.account_id, 42);
+  assert.equal(result.body.inbox_id, 201);
+  assert.equal(result.body.meta.contact.id, 301);
+  assert.equal(result.body.unread_count, 1);
+  assert.equal(result.body.messages[0].id, 501);
+  assert.equal(result.body.messages[0].conversation_id, 101);
+  assert.equal(result.body.messages[0].sender.id, 901);
+});
+
+test('maps RelayDesk history and applies Chatwoot message cursors', async () => {
+  const { client, requests } = createRelayDeskClient();
+  const result = await readRelayDeskConversation(client, {
+    workspaceChatwootId: 42,
+    conversationChatwootId: 101,
+    action: 'messages',
+    before: 600,
+  });
+
+  assert.equal(result.status, 200);
+  assert.equal(result.body.payload.length, 1);
+  assert.equal(result.body.payload[0].id, 501);
+  assert.equal(result.body.payload[0].conversation_id, 101);
+  const historyRequest = requests.find(
+    request => request.table === 'messages' && request.params.has('chatwoot_id')
+  );
+  assert.equal(historyRequest?.params.get('chatwoot_id'), 'lt.600');
+  assert.equal(historyRequest?.params.get('order'), 'chatwoot_id.desc');
+});
+
+test('rejects ambiguous RelayDesk display IDs when opening a conversation', async () => {
+  const { client } = createRelayDeskClient({ duplicateDisplayId: true });
+  const result = await readRelayDeskConversation(client, {
+    workspaceChatwootId: 42,
+    conversationChatwootId: 101,
+    action: 'thread',
+  });
+
+  assert.equal(result.status, 409);
+  assert.deepEqual(result.body, {
+    error: 'conversation_display_id_is_ambiguous',
+  });
 });
