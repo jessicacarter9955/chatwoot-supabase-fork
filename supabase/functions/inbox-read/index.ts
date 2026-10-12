@@ -8,6 +8,7 @@ import { readMessagePage } from './message-page.ts';
 import { mapInboxMessage } from './message-mapping.ts';
 import { readInboxAttachments } from './attachment-mapping.ts';
 import { readPerUserUnreadCounts } from './unread-counts.ts';
+import { readRelayDeskConversationList } from './relaydesk-list.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
@@ -141,6 +142,41 @@ Deno.serve(async request => {
       { error: 'workspaceId_must_be_a_positive_integer' },
       422
     );
+  }
+
+  const schema = url.searchParams.get('schema') ?? 'prototype';
+  if (!['prototype', 'relaydesk'].includes(schema)) {
+    return jsonResponse(
+      { error: 'schema_must_be_prototype_or_relaydesk' },
+      422
+    );
+  }
+  if (schema === 'relaydesk') {
+    if (action !== 'list') {
+      return jsonResponse(
+        { error: 'relaydesk_action_not_supported_yet', action },
+        501
+      );
+    }
+    const inboxId = url.searchParams.has('inboxId')
+      ? parseId(url.searchParams.get('inboxId'))
+      : null;
+    if (url.searchParams.has('inboxId') && !inboxId) {
+      return jsonResponse({ error: 'inboxId_must_be_a_positive_integer' }, 422);
+    }
+    const requestedPage = Number(url.searchParams.get('page') ?? 1);
+    const relayDeskResult = await readRelayDeskConversationList(supabase, {
+      workspaceChatwootId: workspaceId,
+      inboxChatwootId: inboxId,
+      authUserId: userData.user.id,
+      status: url.searchParams.get('status') ?? 'open',
+      assigneeType: url.searchParams.get('assigneeType') ?? 'all',
+      page:
+        Number.isSafeInteger(requestedPage) && requestedPage > 0
+          ? requestedPage
+          : 1,
+    });
+    return jsonResponse(relayDeskResult.body, relayDeskResult.status);
   }
 
   if (action === 'list') {

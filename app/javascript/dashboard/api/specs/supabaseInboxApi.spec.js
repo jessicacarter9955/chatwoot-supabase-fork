@@ -53,7 +53,7 @@ describe('Supabase inbox API', () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       new URL(
-        'https://example.supabase.co/functions/v1/inbox-read?action=list&workspaceId=1&inboxId=7&status=open&assigneeType=me&page=1'
+        'https://example.supabase.co/functions/v1/inbox-read?schema=prototype&action=list&workspaceId=1&inboxId=7&status=open&assigneeType=me&page=1'
       ),
       {
         headers: {
@@ -75,6 +75,21 @@ describe('Supabase inbox API', () => {
       'A Supabase session is required to read the inbox'
     );
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('passes the selected Supabase schema to the inbox read function', async () => {
+    window.globalConfig.SUPABASE_SCHEMA = 'relaydesk';
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ data: { meta: { all_count: 0 }, payload: [] } }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await SupabaseInboxApi.list({ workspaceId: '1' });
+
+    expect(fetchMock.mock.calls[0][0].searchParams.get('schema')).toBe(
+      'relaydesk'
+    );
   });
 
   it('converts Chatwoot snooze seconds to an ISO timestamp', async () => {

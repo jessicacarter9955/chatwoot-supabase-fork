@@ -32,6 +32,10 @@ const invokeRead = async params => {
   const { SUPABASE_URL: url, SUPABASE_ANON_KEY: anonKey } =
     window.globalConfig || {};
   const endpoint = new URL(`${url.replace(/\/$/, '')}/functions/v1/inbox-read`);
+  endpoint.searchParams.set(
+    'schema',
+    window.globalConfig?.SUPABASE_SCHEMA || 'prototype'
+  );
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null) {
       endpoint.searchParams.set(key, String(value));
