@@ -181,4 +181,85 @@ describe('Supabase canned responses', () => {
       'workspace-uuid',
     ]);
   });
+
+  it('keeps the prototype quick_replies CRUD contract intact', async () => {
+    mocks.isRelayDeskSchema.mockReturnValue(false);
+    const listed = query({
+      data: [
+        {
+          id: 81,
+          shortcut: 'hello',
+          body: 'Hello!',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+        },
+      ],
+      error: null,
+    });
+    const created = query({
+      data: { id: 82, shortcut: 'thanks', title: 'thanks', body: 'Thanks!' },
+      error: null,
+    });
+    const updated = query({
+      data: { id: 83, shortcut: 'welcome', title: 'welcome', body: 'Welcome!' },
+      error: null,
+    });
+    const deleted = query({ data: null, error: null });
+    mocks.from
+      .mockReturnValueOnce(listed.builder)
+      .mockReturnValueOnce(created.builder)
+      .mockReturnValueOnce(updated.builder)
+      .mockReturnValueOnce(deleted.builder);
+
+    await expect(CannedResponse.get()).resolves.toMatchObject({
+      data: [
+        { id: 81, account_id: 42, short_code: 'hello', content: 'Hello!' },
+      ],
+    });
+    await expect(
+      CannedResponse.create({ short_code: 'thanks', content: 'Thanks!' })
+    ).resolves.toMatchObject({
+      data: {
+        id: 82,
+        account_id: 42,
+        short_code: 'thanks',
+        content: 'Thanks!',
+      },
+    });
+    await expect(
+      CannedResponse.update(83, {
+        short_code: 'welcome',
+        content: 'Welcome!',
+      })
+    ).resolves.toMatchObject({
+      data: {
+        id: 83,
+        account_id: 42,
+        short_code: 'welcome',
+        content: 'Welcome!',
+      },
+    });
+    await expect(CannedResponse.delete(84)).resolves.toEqual({
+      data: { id: 84 },
+    });
+
+    expect(mocks.from.mock.calls).toEqual([
+      ['quick_replies'],
+      ['quick_replies'],
+      ['quick_replies'],
+      ['quick_replies'],
+    ]);
+    expect(created.calls).toContainEqual([
+      'insert',
+      {
+        workspace_id: 42,
+        shortcut: 'thanks',
+        title: 'thanks',
+        body: 'Thanks!',
+        created_by: 900,
+      },
+    ]);
+    expect(updated.calls).toContainEqual(['eq', 'id', 83]);
+    expect(deleted.calls).toContainEqual(['eq', 'id', 84]);
+  });
 });
