@@ -4,6 +4,13 @@ const mocks = vi.hoisted(() => ({
   getSupabaseCurrentUser: vi.fn(),
   isRelayDeskSchema: vi.fn(),
   isSupabaseAuthEnabled: vi.fn(),
+  toChatwootId: value => {
+    const id = Number(value);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      throw new Error('RelayDesk record is missing a valid Chatwoot ID');
+    }
+    return id;
+  },
 }));
 
 vi.mock('../supabaseClient', () => ({
@@ -11,6 +18,7 @@ vi.mock('../supabaseClient', () => ({
   getSupabaseCurrentUser: (...args) => mocks.getSupabaseCurrentUser(...args),
   isRelayDeskSchema: (...args) => mocks.isRelayDeskSchema(...args),
   isSupabaseAuthEnabled: (...args) => mocks.isSupabaseAuthEnabled(...args),
+  toChatwootId: (...args) => mocks.toChatwootId(...args),
 }));
 
 import CannedResponse from '../cannedResponse';

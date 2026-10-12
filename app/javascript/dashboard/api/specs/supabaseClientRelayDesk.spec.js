@@ -10,7 +10,7 @@ vi.mock('@supabase/supabase-js', () => ({
   }),
 }));
 
-import { getSupabaseCurrentUser } from '../supabaseClient';
+import { getSupabaseCurrentUser, toChatwootId } from '../supabaseClient';
 
 const query = result => {
   const calls = [];
@@ -102,5 +102,14 @@ describe('RelayDesk Supabase user bootstrap', () => {
     ]);
     expect(profile.calls).toContainEqual(['eq', 'id', 'auth-user-uuid']);
     expect(workspaces.calls).toContainEqual(['in', 'id', ['workspace-uuid']]);
+  });
+
+  it('rejects invalid or unsafe Chatwoot ID mappings', () => {
+    expect(() => toChatwootId(null)).toThrow(
+      'RelayDesk record is missing a valid Chatwoot ID'
+    );
+    expect(() => toChatwootId(Number.MAX_SAFE_INTEGER + 1)).toThrow(
+      'RelayDesk record is missing a valid Chatwoot ID'
+    );
   });
 });

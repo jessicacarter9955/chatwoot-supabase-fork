@@ -8,6 +8,14 @@ export const isSupabaseAuthEnabled = () =>
 export const isRelayDeskSchema = () =>
   window.globalConfig?.SUPABASE_SCHEMA === 'relaydesk';
 
+export const toChatwootId = value => {
+  const id = Number(value);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    throw new Error('RelayDesk record is missing a valid Chatwoot ID');
+  }
+  return id;
+};
+
 export const getSupabaseClient = () => {
   if (supabaseClient) return supabaseClient;
 
@@ -46,9 +54,9 @@ export const getSupabaseCurrentUser = async () => {
     .eq(relayDesk ? 'id' : 'auth_user_id', userData.user.id);
   const { data: profile, error: profileError } = await profileQuery.single();
   if (profileError) throw new Error(profileError.message);
-  if (relayDesk && !profile.chatwoot_id) {
-    throw new Error('RelayDesk profile is missing its Chatwoot user ID');
-  }
+  const chatwootUserId = relayDesk
+    ? toChatwootId(profile.chatwoot_id)
+    : profile.id;
 
   const { data: memberships, error: membershipsError } = await client
     .from('workspace_members')
@@ -68,17 +76,13 @@ export const getSupabaseCurrentUser = async () => {
         .in('id', workspaceIds)
     : { data: [], error: null };
   if (workspacesError) throw new Error(workspacesError.message);
-  if (relayDesk && workspaces?.some(workspace => !workspace.chatwoot_id)) {
-    throw new Error('RelayDesk workspace is missing its Chatwoot account ID');
-  }
-
   const roleByWorkspace = new Map(
     memberships.map(item => [item.workspace_id, item.role])
   );
   const accounts = (workspaces || []).map(workspace => {
     const role = roleByWorkspace.get(workspace.id);
     return {
-      id: relayDesk ? workspace.chatwoot_id : workspace.id,
+      id: relayDesk ? toChatwootId(workspace.chatwoot_id) : workspace.id,
       ...(relayDesk ? { supabase_id: workspace.id } : {}),
       name: workspace.name,
       role: role === 'owner' || role === 'admin' ? 'administrator' : 'agent',
@@ -90,7 +94,7 @@ export const getSupabaseCurrentUser = async () => {
   });
 
   return {
-    id: relayDesk ? profile.chatwoot_id : profile.id,
+    id: chatwootUserId,
     ...(relayDesk ? { supabase_id: profile.id } : {}),
     auth_user_id: userData.user.id,
     name: profile.full_name || userData.user.email,

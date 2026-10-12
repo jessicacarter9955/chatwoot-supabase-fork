@@ -4,10 +4,14 @@ import {
   getSupabaseCurrentUser,
   isSupabaseAuthEnabled,
   isRelayDeskSchema,
+  toChatwootId,
 } from './supabaseClient';
 
 const mapQuickReply = (quickReply, workspaceId) => ({
-  id: quickReply.chatwoot_id ?? quickReply.id,
+  id:
+    quickReply.chatwoot_id == null
+      ? quickReply.id
+      : toChatwootId(quickReply.chatwoot_id),
   account_id: workspaceId,
   short_code: quickReply.short_code ?? quickReply.shortcut,
   content: quickReply.content ?? quickReply.body,
@@ -16,14 +20,16 @@ const mapQuickReply = (quickReply, workspaceId) => ({
 });
 
 const resolveWorkspaceId = async (client, chatwootWorkspaceId) => {
-  if (!isRelayDeskSchema()) return Number(chatwootWorkspaceId);
+  const apiWorkspaceId = Number(chatwootWorkspaceId);
+  if (!isRelayDeskSchema()) return apiWorkspaceId;
 
   const { data, error } = await client
     .from('workspaces')
     .select('id')
-    .eq('chatwoot_id', Number(chatwootWorkspaceId))
+    .eq('chatwoot_id', toChatwootId(apiWorkspaceId))
     .single();
   if (error) throw new Error(error.message);
+  if (!data?.id) throw new Error('RelayDesk workspace was not found');
   return data.id;
 };
 
