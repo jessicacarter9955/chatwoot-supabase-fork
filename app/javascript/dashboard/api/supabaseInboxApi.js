@@ -21,6 +21,9 @@ const invokeFunction = async (name, body) => {
   return { data };
 };
 
+const configuredSchema = () =>
+  window.globalConfig?.SUPABASE_SCHEMA || 'prototype';
+
 const invokeRead = async params => {
   const client = getSupabaseClient();
   const { data, error } = await client.auth.getSession();
@@ -101,15 +104,17 @@ export default {
     });
   },
 
-  setStatus({ conversationId, status, snoozedUntil }) {
+  setStatus({ workspaceId, conversationId, status, snoozedUntil }) {
     const snoozedUntilIso =
       typeof snoozedUntil === 'number'
         ? new Date(snoozedUntil * 1000).toISOString()
         : snoozedUntil;
     return invokeFunction('update-conversation-status', {
       conversationId: String(conversationId),
+      workspaceId: String(workspaceId),
       status,
       snoozedUntil: snoozedUntilIso,
+      schema: configuredSchema(),
     }).then(({ data }) => ({
       data: {
         payload: {
@@ -122,12 +127,20 @@ export default {
     }));
   },
 
-  queueReply({ conversationId, content, scheduledAt, clientRequestId }) {
+  queueReply({
+    workspaceId,
+    conversationId,
+    content,
+    scheduledAt,
+    clientRequestId,
+  }) {
     return invokeFunction('queue-reply', {
       conversationId: String(conversationId),
+      workspaceId: String(workspaceId),
       content,
       scheduledAt,
       clientRequestId: clientRequestId || crypto.randomUUID(),
+      schema: configuredSchema(),
     }).then(({ data }) => {
       const message = data.message;
       return {

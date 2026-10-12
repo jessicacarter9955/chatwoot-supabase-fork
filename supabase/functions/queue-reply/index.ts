@@ -2,7 +2,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('APP_ORIGIN') ?? '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
@@ -43,26 +44,62 @@ Deno.serve(async request => {
   const content = body.content;
   const clientRequestId = body.clientRequestId;
   const scheduledAt = body.scheduledAt;
+  const schema = body.schema ?? 'prototype';
+  const workspaceId = body.workspaceId;
   const positiveIntegerPattern = /^[1-9]\d*$/;
-  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const uuidPattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (
     typeof conversationId !== 'string' ||
     typeof content !== 'string' ||
     typeof clientRequestId !== 'string'
   ) {
-    return jsonResponse({ error: 'conversationId, content, and clientRequestId are required' }, 400);
+    return jsonResponse(
+      { error: 'conversationId, content, and clientRequestId are required' },
+      400
+    );
   }
   if (
     !positiveIntegerPattern.test(conversationId) ||
     !Number.isSafeInteger(Number(conversationId)) ||
     !uuidPattern.test(clientRequestId)
   ) {
-    return jsonResponse({ error: 'conversationId must be a positive integer and clientRequestId must be a UUID' }, 422);
+    return jsonResponse(
+      {
+        error:
+          'conversationId must be a positive integer and clientRequestId must be a UUID',
+      },
+      422
+    );
+  }
+  if (!['prototype', 'relaydesk'].includes(String(schema))) {
+    return jsonResponse(
+      { error: 'schema_must_be_prototype_or_relaydesk' },
+      422
+    );
+  }
+  if (
+    schema === 'relaydesk' &&
+    (typeof workspaceId !== 'string' ||
+      !positiveIntegerPattern.test(workspaceId) ||
+      !Number.isSafeInteger(Number(workspaceId)))
+  ) {
+    return jsonResponse(
+      { error: 'workspaceId_must_be_a_positive_integer' },
+      422
+    );
   }
   if (content.trim().length === 0 || content.length > 50_000) {
-    return jsonResponse({ error: 'content_must_be_between_1_and_50000_characters' }, 422);
+    return jsonResponse(
+      { error: 'content_must_be_between_1_and_50000_characters' },
+      422
+    );
   }
-  if (scheduledAt !== undefined && scheduledAt !== null && typeof scheduledAt !== 'string') {
+  if (
+    scheduledAt !== undefined &&
+    scheduledAt !== null &&
+    typeof scheduledAt !== 'string'
+  ) {
     return jsonResponse({ error: 'scheduledAt_must_be_an_iso_timestamp' }, 422);
   }
 
@@ -75,6 +112,10 @@ Deno.serve(async request => {
     return jsonResponse({ error: 'unauthorized' }, 401);
   }
 
+  if (schema === 'relaydesk') {
+    return jsonResponse({ error: 'relaydesk_reply_not_supported_yet' }, 501);
+  }
+
   const { data, error } = await supabase.rpc('enqueue_reply', {
     p_conversation_id: conversationId,
     p_content: content,
@@ -83,7 +124,8 @@ Deno.serve(async request => {
   });
 
   if (error) {
-    const status = error.code === 'P0002' ? 404 : error.code === '28000' ? 401 : 422;
+    const status =
+      error.code === 'P0002' ? 404 : error.code === '28000' ? 401 : 422;
     return jsonResponse({ error: error.message, code: error.code }, status);
   }
 

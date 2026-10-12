@@ -105,6 +105,7 @@ describe('Supabase inbox API', () => {
     });
 
     await SupabaseInboxApi.setStatus({
+      workspaceId: '42',
       conversationId: '2',
       status: 'snoozed',
       snoozedUntil: 1767225600,
@@ -112,9 +113,41 @@ describe('Supabase inbox API', () => {
 
     expect(mocks.invoke).toHaveBeenCalledWith('update-conversation-status', {
       body: {
+        workspaceId: '42',
         conversationId: '2',
         status: 'snoozed',
         snoozedUntil: '2026-01-01T00:00:00.000Z',
+        schema: 'prototype',
+      },
+    });
+  });
+
+  it('forwards the RelayDesk schema and workspace to status updates', async () => {
+    window.globalConfig.SUPABASE_SCHEMA = 'relaydesk';
+    mocks.invoke.mockResolvedValue({
+      data: {
+        conversation: {
+          id: 101,
+          status: 'resolved',
+          snoozed_until: null,
+        },
+      },
+      error: null,
+    });
+
+    await SupabaseInboxApi.setStatus({
+      workspaceId: '42',
+      conversationId: '101',
+      status: 'resolved',
+    });
+
+    expect(mocks.invoke).toHaveBeenCalledWith('update-conversation-status', {
+      body: {
+        workspaceId: '42',
+        conversationId: '101',
+        status: 'resolved',
+        snoozedUntil: undefined,
+        schema: 'relaydesk',
       },
     });
   });
@@ -134,6 +167,7 @@ describe('Supabase inbox API', () => {
     });
 
     const result = await SupabaseInboxApi.queueReply({
+      workspaceId: '42',
       conversationId: '2',
       content: 'Hello',
       clientRequestId: 'request-id',
@@ -149,10 +183,45 @@ describe('Supabase inbox API', () => {
     });
     expect(mocks.invoke).toHaveBeenCalledWith('queue-reply', {
       body: {
+        workspaceId: '42',
         conversationId: '2',
         content: 'Hello',
         scheduledAt: undefined,
         clientRequestId: 'request-id',
+        schema: 'prototype',
+      },
+    });
+  });
+
+  it('passes the configured RelayDesk context with reply requests', async () => {
+    window.globalConfig.SUPABASE_SCHEMA = 'relaydesk';
+    mocks.invoke.mockResolvedValue({
+      data: {
+        message: {
+          id: 'message-id',
+          author_user_id: 'agent-id',
+          author_name: 'Agent',
+          created_at: '2026-01-01T00:00:00.000Z',
+        },
+      },
+      error: null,
+    });
+
+    await SupabaseInboxApi.queueReply({
+      workspaceId: '42',
+      conversationId: '101',
+      content: 'Reply',
+      clientRequestId: 'request-id',
+    });
+
+    expect(mocks.invoke).toHaveBeenCalledWith('queue-reply', {
+      body: {
+        workspaceId: '42',
+        conversationId: '101',
+        content: 'Reply',
+        scheduledAt: undefined,
+        clientRequestId: 'request-id',
+        schema: 'relaydesk',
       },
     });
   });

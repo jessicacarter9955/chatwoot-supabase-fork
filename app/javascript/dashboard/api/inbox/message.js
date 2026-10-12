@@ -103,6 +103,7 @@ class MessageApi extends ApiClient {
         );
       }
       return SupabaseInboxApi.queueReply({
+        workspaceId: this.accountIdFromRoute,
         conversationId,
         content: message,
         clientRequestId: echoId,

@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import { createClient } from '@supabase/supabase-js';
 import { readRelayDeskConversationList } from '../functions/inbox-read/relaydesk-list.ts';
 import { readRelayDeskConversation } from '../functions/inbox-read/relaydesk-thread.ts';
+import { updateRelayDeskConversationStatus } from '../functions/update-conversation-status/relaydesk.ts';
 
 const ids = {
   authUser: 'auth-user-uuid',
@@ -87,7 +88,12 @@ function createRelayDeskClient({
           const url = new URL(input);
           const params = url.searchParams;
           const table = url.pathname.split('/').pop();
-          requests.push({ table, params, method: init?.method });
+          requests.push({
+            table,
+            params,
+            method: init?.method,
+            body: init?.body,
+          });
 
           if (table === 'workspaces')
             return Response.json([{ id: ids.workspace }]);
@@ -114,6 +120,15 @@ function createRelayDeskClient({
           }
           if (table === 'messages') return Response.json([message]);
           if (table === 'message_attachments') return Response.json([]);
+          if (table === 'conversations' && init?.method === 'PATCH') {
+            return Response.json([
+              {
+                ...conversation,
+                ...JSON.parse(init.body),
+                updated_at: '2026-10-12T13:00:00Z',
+              },
+            ]);
+          }
           if (table === 'conversations' && init?.method === 'HEAD') {
             const assigned = params.get('assignee_id');
             const unassigned = params.get('assignee_id') === 'is.null';
@@ -259,5 +274,47 @@ test('rejects ambiguous RelayDesk display IDs when opening a conversation', asyn
   assert.equal(result.status, 409);
   assert.deepEqual(result.body, {
     error: 'conversation_display_id_is_ambiguous',
+  });
+});
+
+test('updates RelayDesk conversation status using the caller RLS client', async () => {
+  const { client, requests } = createRelayDeskClient();
+  const result = await updateRelayDeskConversationStatus(client, {
+    workspaceChatwootId: 42,
+    conversationChatwootId: 101,
+    status: 'snoozed',
+    snoozedUntil: '2099-01-01T00:00:00.000Z',
+  });
+
+  assert.equal(result.status, 200);
+  assert.deepEqual(result.body.conversation, {
+    id: 101,
+    status: 'snoozed',
+    snoozed_until: '2099-01-01T00:00:00.000Z',
+  });
+  const update = requests.find(
+    request => request.table === 'conversations' && request.method === 'PATCH'
+  );
+  assert.deepEqual(JSON.parse(update.body), {
+    status: 'snoozed',
+    snoozed_until: '2099-01-01T00:00:00.000Z',
+    resolved_at: null,
+  });
+  assert.equal(update.params.get('workspace_id'), `eq.${ids.workspace}`);
+  assert.equal(update.params.get('id'), `eq.${ids.conversation}`);
+});
+
+test('requires a future snooze time for RelayDesk', async () => {
+  const { client } = createRelayDeskClient();
+  const result = await updateRelayDeskConversationStatus(client, {
+    workspaceChatwootId: 42,
+    conversationChatwootId: 101,
+    status: 'snoozed',
+    snoozedUntil: '2020-01-01T00:00:00.000Z',
+  });
+
+  assert.equal(result.status, 422);
+  assert.deepEqual(result.body, {
+    error: 'snoozedUntil_must_be_a_valid_future_timestamp',
   });
 });

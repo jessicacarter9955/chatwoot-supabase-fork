@@ -80,6 +80,7 @@ class ConversationApi extends ApiClient {
   toggleStatus({ conversationId, status, snoozedUntil = null }) {
     if (isSupabaseAuthEnabled()) {
       return SupabaseInboxApi.setStatus({
+        workspaceId: this.accountIdFromRoute,
         conversationId,
         status,
         snoozedUntil,
