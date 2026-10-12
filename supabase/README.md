@@ -78,6 +78,10 @@ Using Histoire's resolved Vite server configuration, `ssrLoadModule('vue')` retu
 ### Attachment migration verification (2026-10-11)
 
 The new prototype attachment migration and Edge read path pass 21 focused Node tests and Node's TypeScript syntax check. Prettier and `git diff --check` pass. `supabase db lint --local --schema public` still cannot reach PostgreSQL at `127.0.0.1:54322`, so the migration and Storage policies have not been executed locally. The connected RelayDesk schema was inspected read-only; no migration was applied there.
+
+### Histoire runtime recheck (2026-10-12)
+
+Started Histoire with the bundled Node 24 runtime. The dashboard loads but reports `0 Stories`, and the screenshot is a blank preview. Server collection logs reproduce `resolveComponent is not a function` across Vue stories and later report a missing `.hst-vite-server/deps/@chatwoot_utils.js` module. This confirms the failure occurs during Histoire SSR story collection; it is not a screenshot of the product inbox. The system Node 22 / pnpm 9 pair first refused to start because the repository requires Node 24 / pnpm 10; invoking Histoire directly with Node 24 bypassed that launcher issue, but did not fix story collection. No package or Histoire configuration change was made in this diagnostic run.
 ### Inbox ordering
 
 Conversation lists now sort newest activity first, put conversations without activity at the end, and use descending numeric IDs as a stable tie-breaker for pagination. A PostgREST query-builder test verifies the generated order expression. It does not validate PostgreSQL execution or the target RelayDesk schema.
