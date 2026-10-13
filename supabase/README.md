@@ -106,4 +106,4 @@ Added `schema=relaydesk` paths for `inbox-read?action=list`, `thread`, and `mess
 
 ### Verification recheck (2026-10-13)
 
-The 34 Supabase Node tests and 15 focused frontend API tests pass. These remain mocked tests; they do not establish live RelayDesk API/RLS behavior, provider delivery, or a running inbox. A read-only lookup of `personal` for `refs/heads/codex/supabase-inbox` returned no ref, so the private repository still has no verifiable branch head; the public fork is the only remote receiving this branch's incremental pushes.
+The 34 Supabase Node tests and 15 focused frontend API tests pass. These remain mocked tests; they do not establish live RelayDesk API/RLS behavior, provider delivery, or a running inbox. GitHub metadata confirms the private repository exists and grants this account push permission, but reports size 0; read-only `git ls-remote` returns no refs. The initial Git push timed out after sending about 225 MiB, so the private repository still has no branch head and the public fork is the only remote receiving this branch's incremental pushes.
