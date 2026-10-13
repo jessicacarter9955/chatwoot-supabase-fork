@@ -71,7 +71,7 @@ Declared the PostCSS configuration's missing direct dependency, postcss-import 1
 
 ### Histoire renderer isolation (2026-10-09)
 
-A temporary build restricted to the existing Button story confirms the failure is in Histoire's Vue story collector, before a browser can render the component. The stack reports esolveComponent is not a function from the Histoire generated story stub. Histoire 0.17.15's declared peer dependency supports Vite through 5, while the project runs Vite 6.4.2; this is an unsupported combination, but the isolated build has not established causation. Alternate alias and SSR bundling probes stalled under high memory use and were stopped. No product UI screenshot is available; the previously captured white screenshot is diagnostic only.
+A temporary build restricted to the existing Button story confirms the failure is in Histoire's Vue story collector, before a browser can render the component. The stack reports resolveComponent is not a function from the Histoire generated story stub. Histoire 0.17.15's declared peer dependency supports Vite through 5, while the project runs Vite 6.4.2; this is an unsupported combination, but the isolated build has not established causation. Alternate alias and SSR bundling probes stalled under high memory use and were stopped. No product UI screenshot is available; the previously captured white screenshot is diagnostic only.
 
 ### Additional runtime checks (2026-10-09)
 
@@ -103,3 +103,7 @@ Added authenticated mark-read/mark-unread writes to the UI API for both profiles
 ### RelayDesk inbox list adapter (2026-10-12)
 
 Added `schema=relaydesk` paths for `inbox-read?action=list`, `thread`, and `messages`. These resolve UUID-first workspace/conversation relations and map Chatwoot IDs, including cursor-based unread state and Chatwoot message-ID pagination. List and history/detail adapters fail closed when a workspace-scoped display ID is ambiguous. A status adapter now maps Chatwoot IDs to UUIDs and updates status fields through the authenticated RLS client; the live enum and update policy were inspected read-only, and no project data was changed. Ten mocked PostgREST tests cover read mapping, pagination, unread state, duplicate-ID handling, and status validation/update construction. These tests do not verify live writes, RLS execution, or deployed function behavior. Replies remain unsupported; do not enable this as a complete inbox deployment.
+
+### Verification recheck (2026-10-13)
+
+The 34 Supabase Node tests and 15 focused frontend API tests pass. These remain mocked tests; they do not establish live RelayDesk API/RLS behavior, provider delivery, or a running inbox. A read-only lookup of `personal` for `refs/heads/codex/supabase-inbox` returned no ref, so the private repository still has no verifiable branch head; the public fork is the only remote receiving this branch's incremental pushes.
